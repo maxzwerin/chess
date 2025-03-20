@@ -1,29 +1,19 @@
-Chess Game
+# Chess Game
 
-Overview
+### Overview
 
 This is a simple chess game implemented in C using the X11 library for graphics rendering.
 
-Requirements
+### Requirements
 
 To build and run the game, ensure you have the following installed:
 
-GCC compiler
++ *GCC compiler*
++ *X11 library (libX11)*
++ *Make*
 
-X11 library (libX11)
+### Future Improvements
 
-Make
-
-
-Installation
-
-Clone the repository and navigate to the project directory:
-
-
-Future Improvements
-
-Implement AI opponent
-
-Add GUI enhancements
-
-Support for saving and loading games
++ *Implement AI opponent*
++ *Add GUI enhancements*
++ *Support for saving and loading games*
