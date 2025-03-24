@@ -14,6 +14,8 @@ int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col) {
     // ----- single forward move -----
     if (end_col == start_col && end_row == start_row + direction) {
         if (board[end_row][end_col].type == NONE)
+            en_passant_row = -1;
+            en_passant_col = -1;
             return 1;
     }
     

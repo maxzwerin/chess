@@ -17,47 +17,16 @@ extern const double cell_size;   // 50.00
 int en_passant_row = -1;
 int en_passant_col = -1;
 
+// track castling possibilities
+// { LEFT ROOK, KING, RIGHT ROOK }
+// 1 = piece has not moved
+// 0 = piece HAS moved
+int white_castle[3] = {1, 1, 1};
+int black_castle[3] = {1, 1, 1};
+
 enum Color current_turn = WHITE; 
 
 struct Piece board[8][8];
-
-const char* get_piece_symbol(enum Type type, enum Color color) 
-{
-    if (type == NONE) return ".";
-    if (color == WHITE) {
-        switch(type) {
-            case PAWN:    return "P";
-            case ROOK:    return "R";
-            case BISHOP:  return "B";
-            case KNIGHT:  return "N";  
-            case QUEEN:   return "Q";
-            case KING:    return "K";
-            default:      return "?";
-        }
-    } else {
-        switch(type) {
-            case PAWN:    return "p";
-            case ROOK:    return "r";
-            case BISHOP:  return "b";
-            case KNIGHT:  return "n";  
-            case QUEEN:   return "q";
-            case KING:    return "k";
-            default:      return "?";
-        }
-    }
-}
-
-void print_board() 
-{
-    printf("Current Board:\n");
-    for (int row = 0; row < 8; row++) {
-        printf("%d: ", row);
-        for (int col = 0; col < 8; col++) {
-            printf("%s ", get_piece_symbol(board[row][col].type, board[row][col].color));
-        }
-        printf("\n");
-    }
-}
 
 void init_chess_board() 
 {
@@ -102,6 +71,45 @@ void init_chess_board()
 
 void clear_position(int row, int col) {
     board[row][col] = (struct Piece){NONE, WHITE, row, col, 0, 0};
+}
+
+void revoke_white_castle() {
+    white_castle[0] = 0;
+    white_castle[1] = 0;
+    white_castle[2] = 0;
+}
+void revoke_black_castle() {
+    black_castle[0] = 0;
+    black_castle[1] = 0;
+    black_castle[2] = 0;
+}
+void revoke_castle(enum Color color) {
+    if (color == WHITE) revoke_white_castle();
+    else if (color == BLACK) revoke_black_castle();
+}
+void revoke_white_short_castle() {
+    white_castle[0] = 0;
+    if (!white_castle[0] && !white_castle[2]) revoke_castle(WHITE);
+}
+void revoke_black_short_castle() {
+    black_castle[2] = 0;
+    if (!black_castle[0] && !black_castle[2]) revoke_castle(BLACK);
+}
+void revoke_white_long_castle() {
+    white_castle[2] = 0;
+    if (!white_castle[0] && !white_castle[2]) revoke_castle(WHITE);
+}
+void revoke_black_long_castle() {
+    black_castle[0] = 0;
+    if (!black_castle[0] && !black_castle[2]) revoke_castle(BLACK);
+}
+void revoke_castle_left(enum Color color) {
+    if (color == WHITE) revoke_white_short_castle();
+    else if (color == BLACK) revoke_black_long_castle();
+}
+void revoke_castle_right(enum Color color) {
+    if (color == WHITE) revoke_black_short_castle();
+    else if (color == BLACK) revoke_white_long_castle();
 }
 
 void draw_object(int object, double pos_x, double pos_y, enum Color piece_color) 
@@ -303,7 +311,15 @@ void process_piece_drag() {
                 clear_position(row, col); // clear old position
 
                 // if en passant occurred, clear captured pawn
-                if (en_passant_row == -99) clear_position(old_row, new_col); 
+                if (en_passant_row == -99) clear_position(old_row, new_col);
+                if (moving_piece.type != PAWN) { en_passant_row = -1; en_passant_col = -1; }
+
+                // cannot castle if king moves 
+                if (moving_piece.type == KING) revoke_castle(current_turn);
+                if (moving_piece.type == ROOK) {
+                    if (old_col == 0) revoke_castle_left(current_turn);
+                    else if (old_col == 7) revoke_castle_right(current_turn);
+                }
 
                 current_turn = (current_turn == WHITE) ? BLACK : WHITE;
             } else {
