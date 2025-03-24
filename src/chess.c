@@ -130,7 +130,7 @@ void draw_object(int object, double pos_x, double pos_y, enum Color piece_color)
             xp[j] = x[object][h] + tx;
             yp[j] = y[object][h] + ty;
         }
-        
+
         G_rgb(c[0], c[0], c[0]);
         G_fill_polygon(xp, yp, np);
         G_rgb(c[1], c[1], c[1]);
@@ -196,7 +196,7 @@ void draw_all_pieces()
 {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            
+
             if (board[row][col].type != NONE) {
                 int sprite_index = get_sprite_index(board[row][col]);
                 if (board[row][col].is_moving == 0) {
@@ -205,7 +205,7 @@ void draw_all_pieces()
                     draw_shadow(sprite_index, col, row, board[row][col].color);
                 }
             }
-        
+
         }
     }
 }
@@ -217,7 +217,7 @@ int is_valid_move(int start_row, int start_col, int end_row, int end_col, struct
     if (piece.type == NONE) return 0;
     if (board[end_row][end_col].type != NONE && piece.color == board[end_row][end_col].color) return 0;
     if (start_row == end_row && start_col == end_col) return 0;
-    
+
     switch (piece.type) {
         case PAWN:
             return is_valid_move_pawn(start_row, start_col, end_row, end_col);
@@ -270,6 +270,7 @@ void process_piece_drag() {
     p[1] = WINDOW_SIZE - p[1];
 
     if (mouse_state == 1 && click_in_board(p)) {
+
         double board_x, board_y;
         get_board_coords(p, &board_x, &board_y);
         int col = (int) board_x;
@@ -283,7 +284,7 @@ void process_piece_drag() {
         if (board[row][col].type != NONE) {
             struct Piece moving_piece = board[row][col];
             board[row][col].is_moving = 1;
-            
+
             int old_row = row;
             int old_col = col;
 
@@ -314,8 +315,11 @@ void process_piece_drag() {
             draw_all_pieces();
             G_display_image();
         }
+
     } else if (mouse_state == 1) {
+
        if (p[0] > WINDOW_SIZE - 20 && p[1] > WINDOW_SIZE - 20) exit(0); 
+
     }
 }
 
@@ -343,6 +347,6 @@ int main() {
         process_piece_drag();
         usleep(5000);
     }
-    
+
     return 0;
 }
