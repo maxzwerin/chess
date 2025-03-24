@@ -119,6 +119,10 @@ void draw_object(int object, double pos_x, double pos_y, enum Color piece_color)
         ty = pos_y;
     }
 
+    double c[2];
+    if      (piece_color == WHITE) { c[0] = 1; c[1] = 0; } 
+    else if (piece_color == BLACK) { c[0] = 0; c[1] = 1; }
+
     for (i = 0; i < numpolys[object]; i++) {
         np = psize[object][i];
         for (j = 0; j < np; j++) {
@@ -127,9 +131,37 @@ void draw_object(int object, double pos_x, double pos_y, enum Color piece_color)
             yp[j] = y[object][h] + ty;
         }
         
-        int c[2];
-        if (piece_color == WHITE) { c[0] = 1; c[1] = 0; } 
-        else                      { c[0] = 0; c[1] = 1; }
+        G_rgb(c[0], c[0], c[0]);
+        G_fill_polygon(xp, yp, np);
+        G_rgb(c[1], c[1], c[1]);
+        G_polygon(xp, yp, np);
+    }
+    G_display_image();
+}
+
+void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color) 
+{
+    int h, i, j, np;
+    double xp[100], yp[100];
+    double tx, ty;
+    double center = cell_size / 2;
+
+    tx = offset + pos_x * cell_size + center;
+    ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
+
+    single_box_shadow(tx - center, ty - center);
+
+    double c[2];
+    if      (piece_color == WHITE) { c[0] = 0.6; c[1] = 0.4; } 
+    else if (piece_color == BLACK) { c[0] = 0.4; c[1] = 0.6; }
+
+    for (i = 0; i < numpolys[object]; i++) {
+        np = psize[object][i];
+        for (j = 0; j < np; j++) {
+            h = con[object][i][j];
+            xp[j] = x[object][h] + tx;
+            yp[j] = y[object][h] + ty;
+        }
 
         G_rgb(c[0], c[0], c[0]);
         G_fill_polygon(xp, yp, np);
@@ -164,10 +196,16 @@ void draw_all_pieces()
 {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
-            if (board[row][col].type != NONE && board[row][col].is_moving == 0) {
+            
+            if (board[row][col].type != NONE) {
                 int sprite_index = get_sprite_index(board[row][col]);
-                draw_object(sprite_index, col, row, board[row][col].color);
+                if (board[row][col].is_moving == 0) {
+                    draw_object(sprite_index, col, row, board[row][col].color);
+                } else {
+                    draw_shadow(sprite_index, col, row, board[row][col].color);
+                }
             }
+        
         }
     }
 }
@@ -257,9 +295,15 @@ void process_piece_drag() {
             int new_col = (int) moving_piece.x;
             int new_row = (int) moving_piece.y;
 
+            printf("attempting to move to (%d, %d)\n", new_row, new_col);
+
             if (is_valid_move(old_row, old_col, new_row, new_col, moving_piece)) {
                 board[new_row][new_col] = moving_piece;
-                clear_position(row, col);
+                clear_position(row, col); // clear old position
+
+                // if en passant occurred, clear captured pawn
+                if (en_passant_row == -99) clear_position(old_row, new_col); 
+
                 current_turn = (current_turn == WHITE) ? BLACK : WHITE;
             } else {
                 board[old_row][old_col] = moving_piece;
@@ -271,7 +315,7 @@ void process_piece_drag() {
             G_display_image();
         }
     } else if (mouse_state == 1) {
-       if (p[0] > WINDOW_SIZE - 20 && p[1]) exit(0); 
+       if (p[0] > WINDOW_SIZE - 20 && p[1] > WINDOW_SIZE - 20) exit(0); 
     }
 }
 

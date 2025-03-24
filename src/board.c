@@ -44,7 +44,7 @@ void background()
     }
 }
 
-void single_box(int x, int y, double size) 
+void single_box(int x, int y) 
 {
     double r[2], g[2], b[2];
     if ((x + y) % 2 == 0) {
@@ -58,13 +58,24 @@ void single_box(int x, int y, double size)
     }
 
     G_rgb(r[0], g[0], b[0]);
-    G_fill_rectangle(x, y, size, size);
-    G_rgb(r[1], g[1], b[1]);
-    for (int i = 0; i < S_PTS; i++) {
-        double xb = s_pts[i][0];
-        double yb = s_pts[i][1];
-        G_point(x + xb, y + yb);
-    }
+    G_fill_rectangle(x, y, cell_size, cell_size);
+//    G_rgb(r[1], g[1], b[1]);
+//    for (int i = 0; i < S_PTS; i++) {
+//        double xb = s_pts[i][0];
+//        double yb = s_pts[i][1];
+//        G_point(x + xb, y + yb);
+//    }
+}
+
+void single_box_shadow(int x, int y)
+{
+    double r[2], g[2], b[2];
+    r[0] = 0.52; r[1] = 0.52;
+    g[0] = 0.59; g[1] = 0.28;
+    b[0] = 0.43; b[1] = 0.05;
+
+    G_rgb(r[0], g[0], b[0]);
+    G_fill_rectangle(x, y, cell_size, cell_size);
 }
 
 void grid_lines() {
@@ -105,7 +116,7 @@ void grid_squares()
             double x = offset + i * cell_size;
             double y = offset + j * cell_size;
 
-            single_box(x, y, cell_size); 
+            single_box(x, y); 
         }
     }
 
@@ -172,7 +183,7 @@ void draw_board()
 {
     background();
     grid_squares();
-    grid_lines();
+//    grid_lines();
     exit_button();
 }
 

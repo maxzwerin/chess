@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #define MAXOBJS 20
 #define MAXPTS 1000
 #define MAXPOLYS 10000
@@ -9,53 +13,60 @@ int numpolys[MAXOBJS];
 int psize[MAXOBJS][MAXPOLYS];
 int con[MAXOBJS][MAXPOLYS][20];
 
-void read_object(int onum, char **fname) 
+void read_object(int onum, char *fname) 
 {
     FILE *f;
-    f = fopen(fname[onum], "r");
+    f = fopen(fname, "r");  // Use fname directly
     if (f == NULL) {
-        printf("File not found : %s.\n", fname[onum]);
+        printf("File not found : %s.\n", fname);
         exit(1);
     }
-    
+ 
     fscanf(f, "%d", &numpoints[onum]);
     if (numpoints[onum] > MAXPTS) {
         printf("Too many points.\n");
         exit(1);
     }
 
-    for (int i=0; i<numpoints[onum]; i++) {
+    for (int i = 0; i < numpoints[onum]; i++) {
         fscanf(f, "%lf %lf", &x[onum][i], &y[onum][i]);
     }
-    
+ 
     fscanf(f, "%d", &numpolys[onum]);
     if (numpolys[onum] > MAXPOLYS) {
         printf("Too many polygons.\n");
         exit(1);
     }
 
-    for (int i=0 ; i<numpolys[onum]; i++) {
+    for (int i = 0; i < numpolys[onum]; i++) {
         fscanf(f, "%d", &psize[onum][i]);
-        for (int j=0; j<psize[onum][i]; j++) {
+        for (int j = 0; j < psize[onum][i]; j++) {
             fscanf(f, "%d", &con[onum][i][j]);
         }
     }
+    
+    fclose(f);
 }
 
 void read_all_objects()
 {
     numobjects = 6; 
-    char *filenames[] = {
-      "/Users/maxzwerin/Desktop/viruses/chess/sprites/pawn.xy", 
-      "/Users/maxzwerin/Desktop/viruses/chess/sprites/rook.xy", 
-      "/Users/maxzwerin/Desktop/viruses/chess/sprites/bishop.xy", 
-      "/Users/maxzwerin/Desktop/viruses/chess/sprites/knight.xy",
-      "/Users/maxzwerin/Desktop/viruses/chess/sprites/queen.xy", 
-      "/Users/maxzwerin/Desktop/viruses/chess/sprites/king.xy",
+    char *home = getenv("HOME"); // Get the user's home directory
+
+    char *relative_paths[] = {
+        "/junk/chess/sprites/pawn.xy", 
+        "/junk/chess/sprites/rook.xy", 
+        "/junk/chess/sprites/bishop.xy", 
+        "/junk/chess/sprites/knight.xy",
+        "/junk/chess/sprites/queen.xy", 
+        "/junk/chess/sprites/king.xy",
     };
 
+    char full_path[256]; // Buffer for full path
+
     for (int onum = 0; onum < numobjects; onum++) {
-        read_object(onum, filenames);
+        snprintf(full_path, sizeof(full_path), "%s%s", home, relative_paths[onum]); // Expand ~
+        read_object(onum, full_path); // Pass full path correctly
     }
 }
 

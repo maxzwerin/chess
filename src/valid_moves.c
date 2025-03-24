@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 extern struct Piece board[8][8];
+extern int en_passant_row;
+extern int en_passant_col;
 
 int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col) {
     struct Piece pawn = board[start_row][start_col];
@@ -8,33 +10,42 @@ int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col) {
     int direction;
     if (pawn.color == WHITE) direction = -1;
     else if (pawn.color == BLACK) direction = 1;
-    else return 0;
     
-    // ----- Single Forward Move -----
+    // ----- single forward move -----
     if (end_col == start_col && end_row == start_row + direction) {
-        if (board[end_row][end_col].type == NONE) return 1;
+        if (board[end_row][end_col].type == NONE)
+            return 1;
     }
     
-    // ----- Double Forward Move -----
+    // ----- double forward move -----
     if (end_col == start_col && end_row == start_row + 2 * direction) {
         if ((pawn.color == WHITE && start_row == 6) || (pawn.color == BLACK && start_row == 1)) {
-            // Check that both the intermediate square and destination square are empty.
+            // check that both the intermediate square and destination square are empty.
             if (board[start_row + direction][start_col].type == NONE &&
-                board[end_row][end_col].type == NONE) return 1;
+                board[end_row][end_col].type == NONE) {
+                // set en passant target to the square the pawn passed over.
+                en_passant_row = start_row + direction;
+                en_passant_col = start_col;
+                printf("en passant target set at (%d, %d)\n", en_passant_row, en_passant_col);
+                return 1;
+            }
         }
     }
     
-    // ----- Diagonal Capture Move -----
+    // ----- diagonal capture move -----
     if (abs(end_col - start_col) == 1 && end_row == start_row + direction) {
         if (board[end_row][end_col].type != NONE && 
-            board[end_row][end_col].color != pawn.color) return 1;
+            board[end_row][end_col].color != pawn.color)
+            return 1;
     }
 
-    // ----- En Passant Capture -----
-    if (abs(end_col - start_col) == 1 && end_row == start_row + direction && board[end_row][end_col].type == NONE) {
-        if (en_passant_row == start_row && en_passant_col == end_col) return 1;
+    // ----- en passant capture -----
+    if (end_row == en_passant_row && end_col == en_passant_col) {
+        en_passant_row = -99;
+        en_passant_col = -99;
+        return 1;
     }
-    
+
     return 0;
 }
 
