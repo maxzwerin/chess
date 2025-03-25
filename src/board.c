@@ -1,3 +1,5 @@
+extern struct Piece board[8][8];
+
 #define MODULES 8
 #define WINDOW_SIZE 800
 
@@ -20,21 +22,21 @@ void initialize_rand_pts()
 {
     for (int i = 0; i < B_PTS; i++) {
         b_pts[i][0] = drand48() * WINDOW_SIZE;
-        b_pts[i][1] = drand48() * WINDOW_SIZE;       
-    } 
-    
+        b_pts[i][1] = drand48() * WINDOW_SIZE;
+    }
+ 
     for (int i = 0; i < S_PTS; i++) {
         s_pts[i][0] = drand48() * cell_size;
         s_pts[i][1] = drand48() * cell_size;
     }
-    
+ 
     for (int i = 0; i < L_PTS; i++) {
         l_pts[i][0] = drand48();
         l_pts[i][1] = drand48();
     }
 }
 
-void background() 
+void background()
 {
     G_rgb(0.1, 0.2, 0.0);
     G_clear();
@@ -44,7 +46,7 @@ void background()
     }
 }
 
-void single_box(int x, int y) 
+void single_box(int x, int y)
 {
     double r[2], g[2], b[2];
     if ((x + y) % 2 == 0) {
@@ -59,23 +61,117 @@ void single_box(int x, int y)
 
     G_rgb(r[0], g[0], b[0]);
     G_fill_rectangle(x, y, cell_size, cell_size);
-//    G_rgb(r[1], g[1], b[1]);
-//    for (int i = 0; i < S_PTS; i++) {
-//        double xb = s_pts[i][0];
-//        double yb = s_pts[i][1];
-//        G_point(x + xb, y + yb);
-//    }
+
+    G_rgb(r[1], g[1], b[1]);
+    for (int i = 0; i < S_PTS; i++) {
+        double xb = s_pts[i][0];
+        double yb = s_pts[i][1];
+        G_point(x + xb, y + yb);
+    }
 }
 
 void single_box_shadow(int x, int y)
 {
     double r[2], g[2], b[2];
     r[0] = 0.52; r[1] = 0.52;
-    g[0] = 0.59; g[1] = 0.28;
-    b[0] = 0.43; b[1] = 0.05;
+    g[0] = 0.59; g[1] = 0.48;
+    b[0] = 0.43; b[1] = 0.45;
 
     G_rgb(r[0], g[0], b[0]);
     G_fill_rectangle(x, y, cell_size, cell_size);
+
+    G_rgb(r[1], g[1], b[1]);
+    for (int i = 0; i < S_PTS; i++) {
+        double xb = s_pts[i][0];
+        double yb = s_pts[i][1];
+        G_point(x + xb, y + yb);
+    }
+}
+
+
+void draw_object(int object, double pos_x, double pos_y, enum Color piece_color) 
+{
+    int h, i, j, np;
+    double xp[100], yp[100];
+    double tx, ty;
+    double center = cell_size / 2;
+
+    if (pos_x < 8 && pos_y < 8) {
+        tx = offset + pos_x * cell_size + center;
+        ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
+    } else {
+        tx = pos_x;
+        ty = pos_y;
+    }
+
+    double c[2];
+    if      (piece_color == WHITE) { c[0] = 1; c[1] = 0; } 
+    else if (piece_color == BLACK) { c[0] = 0; c[1] = 1; }
+
+    for (i = 0; i < numpolys[object]; i++) {
+        np = psize[object][i];
+        for (j = 0; j < np; j++) {
+            h = con[object][i][j];
+            xp[j] = x[object][h] + tx;
+            yp[j] = y[object][h] + ty;
+        }
+
+        G_rgb(c[0], c[0], c[0]);
+        G_fill_polygon(xp, yp, np);
+        G_rgb(c[1], c[1], c[1]);
+        G_polygon(xp, yp, np);
+    }
+    G_display_image();
+}
+
+void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color) 
+{
+    int h, i, j, np;
+    double xp[100], yp[100];
+    double tx, ty;
+    double center = cell_size / 2;
+
+    tx = offset + pos_x * cell_size + center;
+    ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
+
+    single_box_shadow(tx - center, ty - center);
+
+    double c[2];
+    if      (piece_color == WHITE) { c[0] = 0.6; c[1] = 0.4; } 
+    else if (piece_color == BLACK) { c[0] = 0.4; c[1] = 0.6; }
+
+    for (i = 0; i < numpolys[object]; i++) {
+        np = psize[object][i];
+        for (j = 0; j < np; j++) {
+            h = con[object][i][j];
+            xp[j] = x[object][h] + tx;
+            yp[j] = y[object][h] + ty;
+        }
+
+        G_rgb(c[0], c[0], c[0]);
+        G_fill_polygon(xp, yp, np);
+        G_rgb(c[1], c[1], c[1]);
+        G_polygon(xp, yp, np);
+    }
+    G_display_image();
+}
+
+void draw_all_pieces() 
+{
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+
+            if (board[row][col].type != NONE) {
+                int sprite_index = get_sprite_index(board[row][col]);
+                if (board[row][col].is_moving == 0) {
+                    draw_object(sprite_index, col, row, board[row][col].color);
+                } else {
+                    draw_shadow(sprite_index, col, row, board[row][col].color);
+                }
+            }
+
+        }
+    }
 }
 
 void grid_lines() {
@@ -83,7 +179,7 @@ void grid_lines() {
     int step = 3;  
 
     G_rgb(0, 0, 0);
-    
+ 
     for (int i = 1; i < MODULES; i++) {
         double x = offset + i * cell_size;  
         for (int y = offset; y <= offset + gridLength; y += step) {
@@ -122,13 +218,13 @@ void grid_squares()
 
     char c[2], s[2];
     int flag = 1;
-    
+ 
     // bolded letters + numbers
     for (int i = 0; i < MODULES; i++) { 
         c[0] = 'A' + i;
         s[0] = '1' + i;
         double A = offset + i * cell_size + 60;
-        double B = offset + 5;
+        double B = offset + 3;
 
         if (flag < 0) G_rgb(0,0,0);
         else G_rgb(1,1,1);
@@ -174,7 +270,7 @@ void get_board_coords(int p[2], double *x, double *y)
 {
     double X = (p[0] - offset) / cell_size;
     double Y = (p[1] - offset) / cell_size;
-    
+
     *x = (int) X;
     *y = MODULES - 1 - (int) Y;
 }
@@ -190,7 +286,7 @@ void draw_board()
 /*  sudo main code { 
 
     draw_board();
-    
+ 
     double p[2];
     double x, y;
 

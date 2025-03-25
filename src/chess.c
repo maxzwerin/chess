@@ -1,9 +1,9 @@
 #include "../FPToolkit.c"
 #include "../M2d_matrix_tools.c"
 #include "piece.c"
+#include "sprites.c"
 #include "board.c"
 #include "valid_moves.c"
-#include "sprites.c"
 
 #define MODULES 8
 #define WINDOW_SIZE 800
@@ -47,12 +47,12 @@ void init_chess_board()
     board[0][5] = (struct Piece){BISHOP, BLACK, 5, 0, move, move};
     board[0][6] = (struct Piece){KNIGHT, BLACK, 6, 0, move, move};
     board[0][7] = (struct Piece){ROOK,   BLACK, 7, 0, move, move};
-    
+ 
     // Row 1: Black pawns.
     for (int col = 0; col < 8; col++) {
         board[1][col] = (struct Piece){PAWN, BLACK, col, 1};
     }
-    
+ 
     // White pieces (bottom of board)
     // Row 6: White pawns.
     for (int col = 0; col < 8; col++) {

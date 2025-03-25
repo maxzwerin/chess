@@ -7,9 +7,34 @@ extern int white_castle[3];
 extern int black_castle[3];
 extern enum Color current_turn;
 
+int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col);
+int is_valid_move_rook(int start_row, int start_col, int end_row, int end_col);
+int is_valid_move_bishop(int start_row, int start_col, int end_row, int end_col);
+int is_valid_move_knight(int start_row, int start_col, int end_row, int end_col);
+int is_valid_move_queen(int start_row, int start_col, int end_row, int end_col);
+int is_valid_move_king(int start_row, int start_col, int end_row, int end_col);
+
+
+int is_valid_move(int start_row, int start_col, int end_row, int end_col, struct Piece piece) 
+{
+    if (piece.type == NONE) return 0;
+    if (board[end_row][end_col].type != NONE && piece.color == board[end_row][end_col].color) return 0;
+    if (start_row == end_row && start_col == end_col) return 0;
+
+    switch (piece.type) {
+        case PAWN:   return is_valid_move_pawn(start_row, start_col, end_row, end_col);
+        case ROOK:   return is_valid_move_rook(start_row, start_col, end_row, end_col);
+        case BISHOP: return is_valid_move_bishop(start_row, start_col, end_row, end_col);
+        case KNIGHT: return is_valid_move_knight(start_row, start_col, end_row, end_col);
+        case QUEEN:  return is_valid_move_queen(start_row, start_col, end_row, end_col);
+        case KING:   return is_valid_move_king(start_row, start_col, end_row, end_col);
+        default:     return 0;
+    }
+}
+
 int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col) {
     struct Piece pawn = board[start_row][start_col];
- 
+
     int direction;
     if (pawn.color == WHITE) direction = -1;
     else if (pawn.color == BLACK) direction = 1;
@@ -130,7 +155,8 @@ int can_castle_right() {
 int is_valid_move_king(int start_row, int start_col, int end_row, int end_col) {
     int row_diff = abs(end_row - start_row);
     int col_diff = abs(end_col - start_col);
- 
+
+
     if (row_diff <= 1 && col_diff <= 1)
         return 1;
  
