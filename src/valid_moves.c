@@ -3,6 +3,9 @@
 extern struct Piece board[8][8];
 extern int en_passant_row;
 extern int en_passant_col;
+extern int white_castle[3];
+extern int black_castle[3];
+extern enum Color current_turn;
 
 int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col);
 int is_valid_move_rook(int start_row, int start_col, int end_row, int end_col);
@@ -39,6 +42,8 @@ int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col) {
     // ----- single forward move -----
     if (end_col == start_col && end_row == start_row + direction) {
         if (board[end_row][end_col].type == NONE)
+            en_passant_row = -1;
+            en_passant_col = -1;
             return 1;
     }
  
@@ -51,7 +56,6 @@ int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col) {
                 // set en passant target to the square the pawn passed over.
                 en_passant_row = start_row + direction;
                 en_passant_col = start_col;
-                printf("en passant target set at (%d, %d)\n", en_passant_row, en_passant_col);
                 return 1;
             }
         }
@@ -123,9 +127,9 @@ int is_valid_move_bishop(int start_row, int start_col, int end_row, int end_col)
 int is_valid_move_knight(int start_row, int start_col, int end_row, int end_col) {
     int row_diff = abs(end_row - start_row);
     int col_diff = abs(end_col - start_col);
-
+ 
     if ((row_diff == 2 && col_diff == 1) || (row_diff == 1 && col_diff == 2)) return 1;
-
+ 
     return 0;
 }
 
@@ -136,13 +140,49 @@ int is_valid_move_queen(int start_row, int start_col, int end_row, int end_col) 
 }
 
 
+int can_castle_left() {
+    if (current_turn == WHITE && white_castle[0] && white_castle[1]) return 1;
+    if (current_turn == BLACK && black_castle[0] && black_castle[1]) return 1;
+    return 0;
+}
+
+int can_castle_right() {
+    if (current_turn == WHITE && white_castle[1] && white_castle[2]) return 1;
+    if (current_turn == BLACK && black_castle[1] && black_castle[2]) return 1;
+    return 0;
+}
+
 int is_valid_move_king(int start_row, int start_col, int end_row, int end_col) {
     int row_diff = abs(end_row - start_row);
     int col_diff = abs(end_col - start_col);
 
+
     if (row_diff <= 1 && col_diff <= 1)
         return 1;
  
+    // ----- castling left -----
+    if ((end_row == 7 || end_row == 0) && end_col < 3) {
+        if (board[end_row][1].type != NONE ||
+            board[end_row][2].type != NONE ||
+            board[end_row][3].type != NONE ) return 0;
+
+        if (can_castle_left()) { 
+            printf("attempting to castle\n");
+            return 1;
+        }
+    }
+
+    // ----- castling right -----
+    if ((end_row == 7 || end_row == 0) && end_col < 3) {
+        if (board[end_row][5].type != NONE ||
+            board[end_row][6].type != NONE ) return 0;
+
+        if (can_castle_right()) {
+            printf("attempting to castle\n");
+            return 1;
+        }
+    }
+
     return 0;
 }
 
