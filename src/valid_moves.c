@@ -5,6 +5,11 @@ extern int en_passant_row;
 extern int en_passant_col;
 extern int white_castle[3];
 extern int black_castle[3];
+
+extern int white_has_castled_short;
+extern int black_has_castled_short;
+extern int white_has_castled_long;
+extern int black_has_castled_long;
 extern enum Color current_turn;
 
 int is_valid_move_pawn(int start_row, int start_col, int end_row, int end_col);
@@ -141,14 +146,26 @@ int is_valid_move_queen(int start_row, int start_col, int end_row, int end_col) 
 
 
 int can_castle_left() {
-    if (current_turn == WHITE && white_castle[0] && white_castle[1]) return 1;
-    if (current_turn == BLACK && black_castle[0] && black_castle[1]) return 1;
+    if (current_turn == WHITE && white_castle[0] && white_castle[1]) { 
+        white_has_castled_long = 1; 
+        return 1; 
+    }
+    if (current_turn == BLACK && black_castle[0] && black_castle[1]) {
+        black_has_castled_long = 1; 
+        return 1; 
+    }
     return 0;
 }
 
 int can_castle_right() {
-    if (current_turn == WHITE && white_castle[1] && white_castle[2]) return 1;
-    if (current_turn == BLACK && black_castle[1] && black_castle[2]) return 1;
+    if (current_turn == WHITE && white_castle[1] && white_castle[2]) { 
+        white_has_castled_short = 1; 
+        return 1; 
+    }
+    if (current_turn == BLACK && black_castle[1] && black_castle[2]) {
+        black_has_castled_short = 1; 
+        return 1; 
+    }
     return 0;
 }
 
@@ -159,26 +176,24 @@ int is_valid_move_king(int start_row, int start_col, int end_row, int end_col) {
 
     if (row_diff <= 1 && col_diff <= 1)
         return 1;
- 
+
     // ----- castling left -----
-    if ((end_row == 7 || end_row == 0) && end_col < 3) {
+    if ((end_row == 7 || end_row == 0) && end_col == 2) {
         if (board[end_row][1].type != NONE ||
             board[end_row][2].type != NONE ||
             board[end_row][3].type != NONE ) return 0;
 
         if (can_castle_left()) { 
-            printf("attempting to castle\n");
             return 1;
         }
     }
 
     // ----- castling right -----
-    if ((end_row == 7 || end_row == 0) && end_col < 3) {
+    if ((end_row == 7 || end_row == 0) && end_col == 6) {
         if (board[end_row][5].type != NONE ||
             board[end_row][6].type != NONE ) return 0;
 
         if (can_castle_right()) {
-            printf("attempting to castle\n");
             return 1;
         }
     }

@@ -24,6 +24,11 @@ int en_passant_col = -1;
 int white_castle[3] = {1, 1, 1};
 int black_castle[3] = {1, 1, 1};
 
+int white_has_castled_short = 0;
+int black_has_castled_short = 0;
+int white_has_castled_long = 0;
+int black_has_castled_long = 0;
+
 enum Color current_turn = WHITE; 
 
 struct Piece board[8][8];
@@ -112,142 +117,35 @@ void revoke_castle_right(enum Color color) {
     else if (color == BLACK) revoke_white_long_castle();
 }
 
-void draw_object(int object, double pos_x, double pos_y, enum Color piece_color) 
-{
-    int h, i, j, np;
-    double xp[100], yp[100];
-    double tx, ty;
-    double center = cell_size / 2;
-
-    if (pos_x < 8 && pos_y < 8) {
-        tx = offset + pos_x * cell_size + center;
-        ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
-    } else {
-        tx = pos_x;
-        ty = pos_y;
-    }
-
-    double c[2];
-    if      (piece_color == WHITE) { c[0] = 1; c[1] = 0; } 
-    else if (piece_color == BLACK) { c[0] = 0; c[1] = 1; }
-
-    for (i = 0; i < numpolys[object]; i++) {
-        np = psize[object][i];
-        for (j = 0; j < np; j++) {
-            h = con[object][i][j];
-            xp[j] = x[object][h] + tx;
-            yp[j] = y[object][h] + ty;
-        }
-
-        G_rgb(c[0], c[0], c[0]);
-        G_fill_polygon(xp, yp, np);
-        G_rgb(c[1], c[1], c[1]);
-        G_polygon(xp, yp, np);
-    }
-    G_display_image();
-}
-
-void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color) 
-{
-    int h, i, j, np;
-    double xp[100], yp[100];
-    double tx, ty;
-    double center = cell_size / 2;
-
-    tx = offset + pos_x * cell_size + center;
-    ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
-
-    single_box_shadow(tx - center, ty - center);
-
-    double c[2];
-    if      (piece_color == WHITE) { c[0] = 0.6; c[1] = 0.4; } 
-    else if (piece_color == BLACK) { c[0] = 0.4; c[1] = 0.6; }
-
-    for (i = 0; i < numpolys[object]; i++) {
-        np = psize[object][i];
-        for (j = 0; j < np; j++) {
-            h = con[object][i][j];
-            xp[j] = x[object][h] + tx;
-            yp[j] = y[object][h] + ty;
-        }
-
-        G_rgb(c[0], c[0], c[0]);
-        G_fill_polygon(xp, yp, np);
-        G_rgb(c[1], c[1], c[1]);
-        G_polygon(xp, yp, np);
-    }
-    G_display_image();
-}
-
-int get_sprite_index(struct Piece p)
-// return sprite index based on piece type 
-{
-    switch (p.type) {
-        case PAWN:
-            return 0;  
-        case ROOK:
-            return 1; 
-        case BISHOP:
-            return 2;
-        case KNIGHT:
-            return 3;
-        case QUEEN:
-            return 4;
-        case KING:
-            return 5;
-        default:
-            return -1;
-    }
-}
-
-void draw_all_pieces() 
-{
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-
-            if (board[row][col].type != NONE) {
-                int sprite_index = get_sprite_index(board[row][col]);
-                if (board[row][col].is_moving == 0) {
-                    draw_object(sprite_index, col, row, board[row][col].color);
-                } else {
-                    draw_shadow(sprite_index, col, row, board[row][col].color);
-                }
-            }
-
-        }
-    }
-}
-
-
-
-int is_valid_move(int start_row, int start_col, int end_row, int end_col, struct Piece piece) 
-{
-    if (piece.type == NONE) return 0;
-    if (board[end_row][end_col].type != NONE && piece.color == board[end_row][end_col].color) return 0;
-    if (start_row == end_row && start_col == end_col) return 0;
-
-    switch (piece.type) {
-        case PAWN:
-            return is_valid_move_pawn(start_row, start_col, end_row, end_col);
-        case ROOK:
-            return is_valid_move_rook(start_row, start_col, end_row, end_col);
-        case BISHOP:
-            return is_valid_move_bishop(start_row, start_col, end_row, end_col);
-        case KNIGHT:
-            return is_valid_move_knight(start_row, start_col, end_row, end_col);
-        case QUEEN:
-            return is_valid_move_queen(start_row, start_col, end_row, end_col);
-        case KING:
-            return is_valid_move_king(start_row, start_col, end_row, end_col);
-        default:
-            return 0;
-    }
-}
 
 void make_move(int old_row, int old_col, int new_row, int new_col, struct Piece piece) {
     // ensure validity (for later when AI is implimented)
     board[new_row][new_col] = piece;  // moves piece to new position
     clear_position(old_row, old_col); // clears old position
+}
+
+void move_castled_rook() {
+    if (current_turn == WHITE) {
+        if (white_has_castled_short) {
+            board[7][5] = board[7][7];
+            clear_position(7,7);
+            white_has_castled_short = 0;
+        } else if (white_has_castled_long) {
+            board[7][3] = board[7][0];
+            clear_position(7,0);
+            white_has_castled_long = 0; 
+        }
+    } else if (current_turn == BLACK) {
+        if (black_has_castled_short) {
+            board[0][5] = board[0][7];
+            clear_position(0,7);
+            black_has_castled_short = 0;
+        } else if (black_has_castled_long) {
+            board[0][3] = board[0][0];
+            clear_position(0,0);
+            black_has_castled_long = 0; 
+        }
+    }
 }
 
 void drag_piece(int object, double *nx, double *ny, double old_board_x, double old_board_y, struct Piece piece) 
@@ -318,11 +216,15 @@ void process_piece_drag() {
                 if (moving_piece.type != PAWN) { en_passant_row = -1; en_passant_col = -1; }
 
                 // cannot castle if king moves 
-                if (moving_piece.type == KING) revoke_castle(current_turn);
-                if (moving_piece.type == ROOK) {
+                if (moving_piece.type == KING) { 
+                    revoke_castle(current_turn);
+                    if (white_has_castled_long || white_has_castled_short) move_castled_rook(); 
+                    if (black_has_castled_long || black_has_castled_short) move_castled_rook();
+                } else if (moving_piece.type == ROOK) {
                     if (old_col == 0) revoke_castle_left(current_turn);
                     else if (old_col == 7) revoke_castle_right(current_turn);
                 }
+
 
                 current_turn = (current_turn == WHITE) ? BLACK : WHITE;
             } else {
