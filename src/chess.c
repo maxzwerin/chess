@@ -244,7 +244,7 @@ int is_valid_move(int start_row, int start_col, int end_row, int end_col, struct
     }
 }
 
-void make_move(int start_row, int start_col, int end_row, int end_col, struct Piece piece) {
+void make_move(int old_row, int old_col, int new_row, int new_col, struct Piece piece) {
     // ensure validity (for later when AI is implimented)
     board[new_row][new_col] = piece;  // moves piece to new position
     clear_position(old_row, old_col); // clears old position
