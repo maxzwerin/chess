@@ -1,9 +1,9 @@
 #include "../FPToolkit.c"
 #include "../M2d_matrix_tools.c"
 #include "piece.c"
+#include "sprites.c"
 #include "board.c"
 #include "valid_moves.c"
-#include "sprites.c"
 
 #define MODULES 8
 #define WINDOW_SIZE 800
@@ -21,33 +21,7 @@ enum Color current_turn = WHITE;
 
 struct Piece board[8][8];
 
-const char* get_piece_symbol(enum Type type, enum Color color) 
-{
-    if (type == NONE) return ".";
-    if (color == WHITE) {
-        switch(type) {
-            case PAWN:    return "P";
-            case ROOK:    return "R";
-            case BISHOP:  return "B";
-            case KNIGHT:  return "N";  
-            case QUEEN:   return "Q";
-            case KING:    return "K";
-            default:      return "?";
-        }
-    } else {
-        switch(type) {
-            case PAWN:    return "p";
-            case ROOK:    return "r";
-            case BISHOP:  return "b";
-            case KNIGHT:  return "n";  
-            case QUEEN:   return "q";
-            case KING:    return "k";
-            default:      return "?";
-        }
-    }
-}
-
-void print_board() 
+void print_board()
 {
     printf("Current Board:\n");
     for (int row = 0; row < 8; row++) {
@@ -59,7 +33,7 @@ void print_board()
     }
 }
 
-void init_chess_board() 
+void init_chess_board()
 {
     double move = 0;
 
@@ -78,12 +52,12 @@ void init_chess_board()
     board[0][5] = (struct Piece){BISHOP, BLACK, 5, 0, move, move};
     board[0][6] = (struct Piece){KNIGHT, BLACK, 6, 0, move, move};
     board[0][7] = (struct Piece){ROOK,   BLACK, 7, 0, move, move};
-    
+ 
     // Row 1: Black pawns.
     for (int col = 0; col < 8; col++) {
         board[1][col] = (struct Piece){PAWN, BLACK, col, 1};
     }
-    
+ 
     // White pieces (bottom of board)
     // Row 6: White pawns.
     for (int col = 0; col < 8; col++) {
@@ -103,139 +77,6 @@ void init_chess_board()
 void clear_position(int row, int col) {
     board[row][col] = (struct Piece){NONE, WHITE, row, col, 0, 0};
 }
-
-void draw_object(int object, double pos_x, double pos_y, enum Color piece_color) 
-{
-    int h, i, j, np;
-    double xp[100], yp[100];
-    double tx, ty;
-    double center = cell_size / 2;
-
-    if (pos_x < 8 && pos_y < 8) {
-        tx = offset + pos_x * cell_size + center;
-        ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
-    } else {
-        tx = pos_x;
-        ty = pos_y;
-    }
-
-    double c[2];
-    if      (piece_color == WHITE) { c[0] = 1; c[1] = 0; } 
-    else if (piece_color == BLACK) { c[0] = 0; c[1] = 1; }
-
-    for (i = 0; i < numpolys[object]; i++) {
-        np = psize[object][i];
-        for (j = 0; j < np; j++) {
-            h = con[object][i][j];
-            xp[j] = x[object][h] + tx;
-            yp[j] = y[object][h] + ty;
-        }
-
-        G_rgb(c[0], c[0], c[0]);
-        G_fill_polygon(xp, yp, np);
-        G_rgb(c[1], c[1], c[1]);
-        G_polygon(xp, yp, np);
-    }
-    G_display_image();
-}
-
-void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color) 
-{
-    int h, i, j, np;
-    double xp[100], yp[100];
-    double tx, ty;
-    double center = cell_size / 2;
-
-    tx = offset + pos_x * cell_size + center;
-    ty = offset + ((MODULES - 1) - pos_y) * cell_size + center;
-
-    single_box_shadow(tx - center, ty - center);
-
-    double c[2];
-    if      (piece_color == WHITE) { c[0] = 0.6; c[1] = 0.4; } 
-    else if (piece_color == BLACK) { c[0] = 0.4; c[1] = 0.6; }
-
-    for (i = 0; i < numpolys[object]; i++) {
-        np = psize[object][i];
-        for (j = 0; j < np; j++) {
-            h = con[object][i][j];
-            xp[j] = x[object][h] + tx;
-            yp[j] = y[object][h] + ty;
-        }
-
-        G_rgb(c[0], c[0], c[0]);
-        G_fill_polygon(xp, yp, np);
-        G_rgb(c[1], c[1], c[1]);
-        G_polygon(xp, yp, np);
-    }
-    G_display_image();
-}
-
-int get_sprite_index(struct Piece p)
-// return sprite index based on piece type 
-{
-    switch (p.type) {
-        case PAWN:
-            return 0;  
-        case ROOK:
-            return 1; 
-        case BISHOP:
-            return 2;
-        case KNIGHT:
-            return 3;
-        case QUEEN:
-            return 4;
-        case KING:
-            return 5;
-        default:
-            return -1;
-    }
-}
-
-void draw_all_pieces() 
-{
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-
-            if (board[row][col].type != NONE) {
-                int sprite_index = get_sprite_index(board[row][col]);
-                if (board[row][col].is_moving == 0) {
-                    draw_object(sprite_index, col, row, board[row][col].color);
-                } else {
-                    draw_shadow(sprite_index, col, row, board[row][col].color);
-                }
-            }
-
-        }
-    }
-}
-
-
-
-int is_valid_move(int start_row, int start_col, int end_row, int end_col, struct Piece piece) 
-{
-    if (piece.type == NONE) return 0;
-    if (board[end_row][end_col].type != NONE && piece.color == board[end_row][end_col].color) return 0;
-    if (start_row == end_row && start_col == end_col) return 0;
-
-    switch (piece.type) {
-        case PAWN:
-            return is_valid_move_pawn(start_row, start_col, end_row, end_col);
-        case ROOK:
-            return is_valid_move_rook(start_row, start_col, end_row, end_col);
-        case BISHOP:
-            return is_valid_move_bishop(start_row, start_col, end_row, end_col);
-        case KNIGHT:
-            return is_valid_move_knight(start_row, start_col, end_row, end_col);
-        case QUEEN:
-            return is_valid_move_queen(start_row, start_col, end_row, end_col);
-        case KING:
-            return is_valid_move_king(start_row, start_col, end_row, end_col);
-        default:
-            return 0;
-    }
-}
-
 
 void drag_piece(int object, double *nx, double *ny, double old_board_x, double old_board_y, struct Piece piece) 
 {
@@ -295,8 +136,6 @@ void process_piece_drag() {
 
             int new_col = (int) moving_piece.x;
             int new_row = (int) moving_piece.y;
-
-            printf("attempting to move to (%d, %d)\n", new_row, new_col);
 
             if (is_valid_move(old_row, old_col, new_row, new_col, moving_piece)) {
                 board[new_row][new_col] = moving_piece;
