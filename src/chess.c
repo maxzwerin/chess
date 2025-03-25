@@ -244,6 +244,11 @@ int is_valid_move(int start_row, int start_col, int end_row, int end_col, struct
     }
 }
 
+void make_move(int start_row, int start_col, int end_row, int end_col, struct Piece piece) {
+    // ensure validity (for later when AI is implimented)
+    board[new_row][new_col] = piece;  // moves piece to new position
+    clear_position(old_row, old_col); // clears old position
+}
 
 void drag_piece(int object, double *nx, double *ny, double old_board_x, double old_board_y, struct Piece piece) 
 {
@@ -304,11 +309,9 @@ void process_piece_drag() {
             int new_col = (int) moving_piece.x;
             int new_row = (int) moving_piece.y;
 
-            printf("attempting to move to (%d, %d)\n", new_row, new_col);
-
             if (is_valid_move(old_row, old_col, new_row, new_col, moving_piece)) {
-                board[new_row][new_col] = moving_piece;
-                clear_position(row, col); // clear old position
+
+                make_move(old_row, old_col, new_row, new_col, moving_piece);
 
                 // if en passant occurred, clear captured pawn
                 if (en_passant_row == -99) clear_position(old_row, new_col);
