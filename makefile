@@ -3,24 +3,27 @@ CC = gcc
 CFLAGS = -std=c99 -I./src -I/opt/homebrew/include
 LDFLAGS = -L/opt/X11/lib -I/opt/X11/include -lX11 -lm
 
-# Source and object file
-SRC = src/chess.c
-OBJ = chess.o
+# Source files and object files
+SRC = $(wildcard src2/*.c)
+OBJ = $(SRC:src/%.c=build/%.o)
 
 # Executable name
-TARGET = chess
+TARGET = x
 
-# Default target: build the executable
+# Default target
 all: $(TARGET)
 
-# Link object file to create the executable
+# Link object files into the executable
 $(TARGET): $(OBJ)
-	$(CC) $(OBJ) -o $(TARGET) $(LDFLAGS)
+	$(CC) $(OBJ) -o $@ $(LDFLAGS)
 
-# Compile the source file into an object file
-$(OBJ): $(SRC)
-	$(CC) $(CFLAGS) -c $(SRC) -o $(OBJ)
+# Compile source files into object files
+build/%.o: src/%.c
+	@mkdir -p build
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean up generated files
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -rf build $(TARGET)
+
+run: $(TARGET)
+	./$(TARGET)
