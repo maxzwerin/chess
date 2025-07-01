@@ -17,6 +17,12 @@ double b_pts[B_PTS][2];
 double s_pts[S_PTS][2];
 double l_pts[L_PTS][2];
 
+
+// ----- colors ----- //
+#define GRN Gi_rgb(112,134,87);
+#define DRK Gi_rgb(165,117,80);
+#define LGT Gi_rgb(235,209,166);
+
 // ----- display ----- //
 void initialize_rand_pts() {
     for (int i = 0; i < B_PTS; i++) {
@@ -76,49 +82,25 @@ void perlin() {
 }
 
 void single_box(int x, int y) {
-    double r[2], g[2], b[2];
-    if ((x + y) % 2 == 0) {
-        r[0] = 0.42; r[1] = 0.52;
-        g[0] = 0.18; g[1] = 0.28;
-        b[0] = 0.05; b[1] = 0.05;
-    } else {
-        r[0] = 0.90; r[1] = 0.80;
-        g[0] = 0.80; g[1] = 0.70;
-        b[0] = 0.60; b[1] = 0.50;
-    }
+    if ((x + y) % 2 == 0) Gi_rgb(165,117,80);
+    else                  Gi_rgb(235,209,166);
 
-    G_rgb(r[0], g[0], b[0]);
     G_fill_rectangle(x, y, cell_size, cell_size);
-
-    G_rgb(r[1], g[1], b[1]);
-    for (int i = 0; i < S_PTS; i++) {
-        double xb = s_pts[i][0];
-        double yb = s_pts[i][1];
-        G_point(x + xb, y + yb);
-    }
 }
 
 void single_box_shadow(int x, int y) {
-    double r[2], g[2], b[2];
-    r[0] = 50; r[1] = 40;
-    g[0] = 120; g[1] = 100;
-    b[0] = 50; b[1] = 40;
+    Gi_rgb(112,134,87);
 
-    Gi_rgb(r[0],g[0],b[0]);
     G_fill_rectangle(x, y, cell_size, cell_size);
-
-    Gi_rgb(r[1],g[1],b[1]);
-    for (int i = 0; i < S_PTS; i++) {
-        double xb = s_pts[i][0];
-        double yb = s_pts[i][1]; G_point(x + xb, y + yb); }
 }
 
 
-void draw_object(int object, double pos_x, double pos_y, enum Color piece_color) {
+void draw_object(int object, double pos_x, double pos_y, struct Piece piece) {
     int h, i, j, np;
     double xp[100], yp[100];
     double tx, ty;
     double center = cell_size / 2;
+    double c[2];
 
     if (pos_x < 8 && pos_y < 8) {
         int fx = flipped ? (MODULES - 1 - (int)pos_x) : (int)pos_x;
@@ -132,43 +114,17 @@ void draw_object(int object, double pos_x, double pos_y, enum Color piece_color)
         ty = pos_y;
     }
 
-    double c[2];
-    if      (piece_color == WHITE) { c[0] = 1; c[1] = 0; } 
-    else if (piece_color == BLACK) { c[0] = 0; c[1] = 1; }
-
-    for (i = 0; i < numpolys[object]; i++) {
-        np = psize[object][i];
-        for (j = 0; j < np; j++) {
-            h = con[object][i][j];
-            xp[j] = x[object][h] + tx;
-            yp[j] = y[object][h] + ty;
-        }
-
-        G_rgb(c[0], c[0], c[0]);
-        G_fill_polygon(xp, yp, np);
-        G_rgb(c[1], c[1], c[1]);
-        G_polygon(xp, yp, np);
+    if (piece.is_moving == 1) {    
+        if      (piece.color == WHITE) { c[0] = 0.6; c[1] = 0.4; } 
+        else if (piece.color == BLACK) { c[0] = 0.4; c[1] = 0.6; }
+    }  else {
+        if      (piece.color == WHITE) { c[0] = 1; c[1] = 0; } 
+        else if (piece.color == BLACK) { c[0] = 0; c[1] = 1; }
     }
-    G_display_image();
-}
 
-void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color) {
-    int h, i, j, np;
-    double xp[100], yp[100];
-    double tx, ty;
-    double center = cell_size / 2;
-
-    int fx = flipped ? (MODULES - 1 - (int)pos_x) : (int)pos_x;
-    int fy = flipped ? (int)pos_y : (MODULES - 1 - (int)pos_y);
-
-    tx = offset + fx * cell_size + center;
-    ty = offset + fy * cell_size + center;
-
-    single_box_shadow(tx - center, ty - center);
-
-    double c[2];
-    if      (piece_color == WHITE) { c[0] = 0.6; c[1] = 0.4; } 
-    else if (piece_color == BLACK) { c[0] = 0.4; c[1] = 0.6; }
+    if (piece.is_moving) {
+        single_box_shadow(tx - center, ty - center);
+    }
 
     for (i = 0; i < numpolys[object]; i++) {
         np = psize[object][i];
@@ -178,9 +134,9 @@ void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color)
             yp[j] = y[object][h] + ty;
         }
 
-        G_rgb(c[0], c[0], c[0]);
+        G_rgb(c[0],c[0],c[0]);
         G_fill_polygon(xp, yp, np);
-        G_rgb(c[1], c[1], c[1]);
+        G_rgb(c[1],c[1],c[1]);
         G_polygon(xp, yp, np);
     }
     G_display_image();
@@ -192,11 +148,7 @@ void draw_all_pieces() {
 
             if (board[row][col].type != NONE) {
                 int sprite_index = board[row][col].type - 1;
-                if (board[row][col].is_moving == 0) {
-                    draw_object(sprite_index, col, row, board[row][col].color);
-                } else {
-                    draw_shadow(sprite_index, col, row, board[row][col].color);
-                }
+                draw_object(sprite_index, col, row, board[row][col]);
             }
 
         }
@@ -244,8 +196,8 @@ void labels() {
         double A = offset + i * cell_size + 60;
         double B = offset + 3;
 
-        if (flag < 0) G_rgb(0, 0, 0);
-        else          G_rgb(1, 1, 1);
+        if (flag < 0) Gi_rgb(0,0,0);
+        else          Gi_rgb(255,255,255);
 
         G_draw_string(c, A, B);
         G_draw_string(c, A + 1, B);
@@ -270,14 +222,6 @@ void grid_squares() {
             single_box(x, y); 
         }
     }
-}
-
-void exit_button() {
-    G_rgb(1,0,0);
-    G_fill_rectangle(WINDOW_SIZE - 20, WINDOW_SIZE - 20, 20, 20);
-    G_rgb(1,1,1);
-    G_line(WINDOW_SIZE - 18, WINDOW_SIZE - 18, WINDOW_SIZE - 2, WINDOW_SIZE - 2);
-    G_line(WINDOW_SIZE - 2, WINDOW_SIZE - 18, WINDOW_SIZE - 18, WINDOW_SIZE - 2);
 }
 
 // ----- logic ----- //
@@ -319,5 +263,4 @@ void draw_board() {
     grid_squares();
     labels();
     // grid_lines();
-    // exit_button();
 }

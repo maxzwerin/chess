@@ -28,9 +28,7 @@ void single_box(int x, int y);
 
 void single_box_shadow(int x, int y);
 
-void draw_object(int object, double pos_x, double pos_y, enum Color piece_color);
-
-void draw_shadow(int object, double pos_x, double pos_y, enum Color piece_color);
+void draw_object(int object, double pos_x, double pos_y, struct Piece piece);
 
 void draw_all_pieces();
 
@@ -39,8 +37,6 @@ void grid_lines();
 void labels();
 
 void grid_squares();
-
-void exit_button();
 
 int click_in_board(int p[2]);
 

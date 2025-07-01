@@ -63,11 +63,13 @@ void clear_position(int row, int col) {
 
 void make_move(int old_row, int old_col, int new_row, int new_col, struct Piece piece) {
     // ensure validity (for later when AI is implimented)
+    piece.is_moving = 0;
     printf("\n\nmove being made:\n");
     printf("+++ [%d, %d]\n", new_row, new_col);
     board[new_row][new_col] = piece;  // moves piece to new position
     printf("--- [%d, %d]\n", old_row, old_col);
     clear_position(old_row, old_col); // clears old position
+    current_turn = !current_turn;
 }
 
 void drag_piece(int object, double *nx, double *ny, 
@@ -83,7 +85,7 @@ void drag_piece(int object, double *nx, double *ny,
 
         draw_board();
         draw_all_pieces();
-        draw_object(object, p[0], p[1], piece.color);
+        draw_object(object, p[0], p[1], piece);
         t += 0.001;
 
     } while (S_mouse_coord_window(p) == 1);
@@ -100,7 +102,11 @@ void drag_piece(int object, double *nx, double *ny,
     draw_all_pieces();
 }
 
-void process_piece_drag(){
+
+void process_piece_drag() {
+    static int selected = 0;
+    static int sel_row = -1, sel_col = -1;
+
     int p[2];
     int mouse_state = S_mouse_coord_window(p);
     p[1] = WINDOW_SIZE - p[1];
@@ -112,46 +118,73 @@ void process_piece_drag(){
         int col = (int) board_x;
         int row = (int) board_y;
 
-        if (board[row][col].type != NONE && board[row][col].color != current_turn) {
+        struct Piece *clicked = &board[row][col];
+
+        // --- CASE 1: Clicked on a selected piece again -> deselect
+        if (selected && row == sel_row && col == sel_col) {
+            selected = 0;
+            board[row][col].is_moving = 0;
             return;
         }
 
-        if (board[row][col].type != NONE) {
-            struct Piece moving_piece = board[row][col];
+        // --- CASE 2: A piece is already selected
+        if (selected) {
+            struct Piece moving_piece = board[sel_row][sel_col];
+            int sprite_index = moving_piece.type - 1;
+
+            double new_x = col, new_y = row;
+            if (is_valid_move(sel_row, sel_col, row, col, moving_piece)) {
+
+                selected = 0;
+                make_move(sel_row, sel_col, row, col, moving_piece);
+
+            } else if (clicked->type != NONE && clicked->color == current_turn) {
+                // Switch selection to another friendly piece
+                board[sel_row][sel_col].is_moving = 0;
+                sel_row = row;
+                sel_col = col;
+                board[row][col].is_moving = 2;
+            } else {
+                // Invalid square — cancel selection
+                board[sel_row][sel_col].is_moving = 0;
+                selected = 0;
+            }
+
+            draw_board();
+            draw_all_pieces();
+            G_display_image();
+            return;
+        }
+
+        // --- CASE 3: Fresh drag
+        if (clicked->type != NONE && clicked->color == current_turn) {
+            struct Piece moving_piece = *clicked;
             board[row][col].is_moving = 1;
 
             int old_row = row;
             int old_col = col;
-
             int sprite_index = moving_piece.type - 1;
 
-            drag_piece(sprite_index, &moving_piece.x, &moving_piece.y, 
+            drag_piece(sprite_index, &moving_piece.x, &moving_piece.y,
                        old_col, old_row, moving_piece);
 
-            int new_col = (int) moving_piece.x;
-            int new_row = (int) moving_piece.y;
+            int new_col = (int)moving_piece.x;
+            int new_row = (int)moving_piece.y;
 
             if (is_valid_move(old_row, old_col, new_row, new_col, moving_piece)) {
 
                 make_move(old_row, old_col, new_row, new_col, moving_piece);
 
-                current_turn = (current_turn == WHITE) ? BLACK : WHITE;
             } else if (old_row == new_row && old_col == new_col) {
-                printf("piece is selected\n");
-                board[row][col].is_moving = 2; // piece is selected
-                // display valid moves for selected piece
-                // if next click is on a valid square, move the piece
-                // if the next click is on a different piece,
-                // then select that new piece. if the next click is
-                // on an invalid square, stop showing the valid squares
-                // for said piece
+                selected = 1;
+                sel_row = row;
+                sel_col = col;
+                board[row][col].is_moving = 2;
             } else {
                 board[old_row][old_col] = moving_piece;
                 board[row][col].is_moving = 0;
             }
 
-            // adding to t before and after allows for a smooth
-            // animation when placing a piece on the board
             t += 0.001;
             draw_board();
             draw_all_pieces();
@@ -160,8 +193,7 @@ void process_piece_drag(){
         }
 
     } else if (mouse_state == 1) {
-
-        if (p[0] > WINDOW_SIZE - 20 && p[1] > WINDOW_SIZE - 20) exit(0); 
+        if (p[0] > WINDOW_SIZE - 20 && p[1] > WINDOW_SIZE - 20) exit(0);
         draw_board();
         draw_all_pieces();
     }
