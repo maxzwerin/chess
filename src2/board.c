@@ -9,6 +9,7 @@
 const double offset = 100;
 const double cell_size = (WINDOW_SIZE - 2 * offset) / MODULES;
 extern double t;
+extern int seed;
 extern int flipped;
 
 // ----- rand pts ----- //
@@ -43,7 +44,7 @@ void background() {
     }
 }
 
-void perlin(int seed) {
+void perlin() {
     int step = 1;
     double nx, ny, e, m;
 
@@ -99,14 +100,14 @@ void single_box(int x, int y) {
 
 void single_box_shadow(int x, int y) {
     double r[2], g[2], b[2];
-    r[0] = 0.52; r[1] = 0.52;
-    g[0] = 0.59; g[1] = 0.48;
-    b[0] = 0.43; b[1] = 0.45;
+    r[0] = 50; r[1] = 40;
+    g[0] = 120; g[1] = 100;
+    b[0] = 50; b[1] = 40;
 
-    G_rgb(r[0], g[0], b[0]);
+    Gi_rgb(r[0],g[0],b[0]);
     G_fill_rectangle(x, y, cell_size, cell_size);
 
-    G_rgb(r[1], g[1], b[1]);
+    Gi_rgb(r[1],g[1],b[1]);
     for (int i = 0; i < S_PTS; i++) {
         double xb = s_pts[i][0];
         double yb = s_pts[i][1]; G_point(x + xb, y + yb); }
@@ -312,9 +313,9 @@ void get_board_coords(int p[2], double *x, double *y)
     }
 }
 
-void draw_board(int seed) {
+void draw_board() {
     // background();
-    perlin(seed);
+    perlin();
     grid_squares();
     labels();
     // grid_lines();

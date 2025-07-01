@@ -22,7 +22,7 @@ void initialize_rand_pts();
 
 void background();
 
-void perlin(int seed);
+void perlin();
 
 void single_box(int x, int y);
 
@@ -46,7 +46,7 @@ int click_in_board(int p[2]);
 
 void get_board_coords(int p[2], double *x, double *y);
 
-void draw_board(int seed);
+void draw_board();
 
 #endif // BOARD_H_
 

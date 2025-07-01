@@ -9,13 +9,15 @@
 struct Piece board[8][8];
 
 enum Color current_turn = WHITE; 
-int flipped = 0; // 0 = white bottom, 1 = black bottom
 
+// 0 = white bottom, 1 = black bottom
+int flipped = 0;
+
+// perlin noise globals
 double t = 0;
 int seed;
 
-void init_chess_board() 
-{
+void init_chess_board() {
     double move = 0;
 
     for (int row = 0; row < 8; row++) {
@@ -61,13 +63,16 @@ void clear_position(int row, int col) {
 
 void make_move(int old_row, int old_col, int new_row, int new_col, struct Piece piece) {
     // ensure validity (for later when AI is implimented)
+    printf("\n\nmove being made:\n");
+    printf("+++ [%d, %d]\n", new_row, new_col);
     board[new_row][new_col] = piece;  // moves piece to new position
+    printf("--- [%d, %d]\n", old_row, old_col);
     clear_position(old_row, old_col); // clears old position
 }
 
 void drag_piece(int object, double *nx, double *ny, 
                 double old_board_x, double old_board_y, 
-                struct Piece piece, int seed) 
+                struct Piece piece) 
 {
     int p[2];
 
@@ -76,7 +81,7 @@ void drag_piece(int object, double *nx, double *ny,
         S_mouse_coord_window(p);
         p[1] = WINDOW_SIZE - p[1];
 
-        draw_board(seed);
+        draw_board();
         draw_all_pieces();
         draw_object(object, p[0], p[1], piece.color);
         t += 0.001;
@@ -91,11 +96,11 @@ void drag_piece(int object, double *nx, double *ny,
         *ny = old_board_y;
     }
 
-    draw_board(seed);
+    draw_board();
     draw_all_pieces();
 }
 
-void process_piece_drag(int seed) {
+void process_piece_drag(){
     int p[2];
     int mouse_state = S_mouse_coord_window(p);
     p[1] = WINDOW_SIZE - p[1];
@@ -121,7 +126,7 @@ void process_piece_drag(int seed) {
             int sprite_index = moving_piece.type - 1;
 
             drag_piece(sprite_index, &moving_piece.x, &moving_piece.y, 
-                       old_col, old_row, moving_piece, seed);
+                       old_col, old_row, moving_piece);
 
             int new_col = (int) moving_piece.x;
             int new_row = (int) moving_piece.y;
@@ -131,6 +136,15 @@ void process_piece_drag(int seed) {
                 make_move(old_row, old_col, new_row, new_col, moving_piece);
 
                 current_turn = (current_turn == WHITE) ? BLACK : WHITE;
+            } else if (old_row == new_row && old_col == new_col) {
+                printf("piece is selected\n");
+                board[row][col].is_moving = 2; // piece is selected
+                // display valid moves for selected piece
+                // if next click is on a valid square, move the piece
+                // if the next click is on a different piece,
+                // then select that new piece. if the next click is
+                // on an invalid square, stop showing the valid squares
+                // for said piece
             } else {
                 board[old_row][old_col] = moving_piece;
                 board[row][col].is_moving = 0;
@@ -139,7 +153,7 @@ void process_piece_drag(int seed) {
             // adding to t before and after allows for a smooth
             // animation when placing a piece on the board
             t += 0.001;
-            draw_board(seed);
+            draw_board();
             draw_all_pieces();
             G_display_image();
             t += 0.001;
@@ -148,7 +162,7 @@ void process_piece_drag(int seed) {
     } else if (mouse_state == 1) {
 
         if (p[0] > WINDOW_SIZE - 20 && p[1] > WINDOW_SIZE - 20) exit(0); 
-        draw_board(seed);
+        draw_board();
         draw_all_pieces();
     }
 }
@@ -164,9 +178,9 @@ void init_functions() {
     init_chess_board();
 }
 
-void update(int seed) {
-    process_piece_drag(seed);
-    draw_board(seed);
+void update() {
+    process_piece_drag();
+    draw_board();
     draw_all_pieces();
     G_display_image();
     t += 0.001;
@@ -176,19 +190,19 @@ void update(int seed) {
 
 int main() {
     srand(time(NULL));
-    int seed = rand() % 10000;
+    seed = rand() % 10000;
 
     G_init_graphics(WINDOW_SIZE, WINDOW_SIZE);
     init_functions();
 
-    draw_board(seed);
-    perlin(seed);
+    draw_board();
+    perlin();
     draw_all_pieces();
 
     while (1) {
         if (G_key_down('q') == 'q') exit(0);
         if (G_key_press() == 'f') flipped = !flipped;
-        update(seed);
+        update();
     }
 
     return 0;

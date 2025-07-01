@@ -14,8 +14,7 @@ int numpolys[MAXOBJS];
 int psize[MAXOBJS][MAXPOLYS];
 int con[MAXOBJS][MAXPOLYS][20];
 
-void read_object(int onum, char *fname) 
-{
+void read_object(int onum, char *fname) {
     FILE *f;
     f = fopen(fname, "r");  // Use fname directly
     if (f == NULL) {
@@ -49,8 +48,7 @@ void read_object(int onum, char *fname)
     fclose(f);
 }
 
-void read_all_objects()
-{
+void read_all_objects() {
     numobjects = 6; 
     char *home = getenv("HOME"); // Get the user's home directory
 
@@ -95,15 +93,13 @@ void scale_all_objects()
     }
 }
 
-void translate_object(int object, double dx, double dy)
-{
+void translate_object(int object, double dx, double dy) {
     double T[3][3];
     M2d_make_translation(T, dx, dy);
     M2d_mat_mult_points(x[object], y[object], T, x[object], y[object], numpoints[object]);
 }
 
-void scale_object(int object, double mag)
-{
+void scale_object(int object, double mag) {
     double cx = 0, cy = 0;
     for (int i = 0; i < numpoints[object]; i++) {
         cx += x[object][i];
