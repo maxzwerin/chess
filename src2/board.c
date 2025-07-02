@@ -18,11 +18,6 @@ double s_pts[S_PTS][2];
 double l_pts[L_PTS][2];
 
 
-// ----- colors ----- //
-#define GRN Gi_rgb(112,134,87);
-#define DRK Gi_rgb(165,117,80);
-#define LGT Gi_rgb(235,209,166);
-
 // ----- display ----- //
 void initialize_rand_pts() {
     for (int i = 0; i < B_PTS; i++) {
@@ -53,11 +48,12 @@ void background() {
 void perlin() {
     int step = 1;
     double nx, ny, e, m;
+    double fill = offset - 10;
 
     for (int y = 0; y < WINDOW_SIZE; y += step) {
         for (int x = 0; x < WINDOW_SIZE; x += step) {
-            if (x > offset && x < WINDOW_SIZE - offset && 
-                y > offset && y < WINDOW_SIZE - offset) continue;
+            if (x > fill && x < WINDOW_SIZE - fill && 
+                y > fill && y < WINDOW_SIZE - fill) continue;
 
             nx = (double)x / WINDOW_SIZE * GRID_SIZE;
             ny = (double)y / WINDOW_SIZE * GRID_SIZE;
@@ -151,6 +147,39 @@ void draw_all_pieces() {
                 draw_object(sprite_index, col, row, board[row][col]);
             }
 
+        }
+    }
+}
+
+void animate_flip() {
+    grid_squares();
+    labels();
+
+    int indices[64];
+    for (int i = 0; i < 64; i++) {
+        indices[i] = i;
+    }
+
+    // shuffle
+    for (int i = 63; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int temp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = temp;
+    }
+
+    for (int i = 0; i < 64; i++) {
+        int index = indices[i];
+        int row = index / 8;
+        int col = index % 8;
+
+        if (board[row][col].type != NONE) {
+            int sprite_index = board[row][col].type - 1;
+            draw_object(sprite_index, col, row, board[row][col]);
+            perlin();
+            G_display_image();
+            t += 0.001;
+            usleep(5000);
         }
     }
 }

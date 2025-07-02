@@ -35,6 +35,7 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <X11/Xutil.h>// for XComposeStatus
+#include <X11/XKBlib.h>
 
 int Set_Color_Rgb_X (int r, int g, int b) ;
 
@@ -2309,21 +2310,23 @@ int G_wait_event(double p[2])
 
 
 
-int G_key_down(int KeyCheck) {
+int G_key_down() {
     char KeyReturn[32];
-    KeyCode code = XKeysymToKeycode(XxDisplay, KeyCheck);
-
     XQueryKeymap(XxDisplay, KeyReturn);
 
-    int byte_index = code / 8;
-    int bit_index  = code % 8;
+    for (int keycode = 0; keycode < 256; keycode++) {
+        int byte_index = keycode / 8;
+        int bit_index  = keycode % 8;
 
-    // Check if the bit is set for the given keycode
-    if (KeyReturn[byte_index] & (1 << bit_index)) {
-        return KeyCheck;
+        if (KeyReturn[byte_index] & (1 << bit_index)) {
+            KeySym keysym = XkbKeycodeToKeysym(XxDisplay, keycode, 0, 0);
+            if (keysym != NoSymbol) {
+                return (int)keysym;
+            }
+        }
     }
 
-    return -1;
+    return -1;  // No key currently held}
 }
 
 

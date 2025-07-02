@@ -139,13 +139,13 @@ void process_piece_drag() {
                 make_move(sel_row, sel_col, row, col, moving_piece);
 
             } else if (clicked->type != NONE && clicked->color == current_turn) {
-                // Switch selection to another friendly piece
+                // switch selection to another friendly piece
                 board[sel_row][sel_col].is_moving = 0;
                 sel_row = row;
                 sel_col = col;
                 board[row][col].is_moving = 2;
             } else {
-                // Invalid square — cancel selection
+                // invalid square — cancel selection
                 board[sel_row][sel_col].is_moving = 0;
                 selected = 0;
             }
@@ -193,9 +193,17 @@ void process_piece_drag() {
         }
 
     } else if (mouse_state == 1) {
-        if (p[0] > WINDOW_SIZE - 20 && p[1] > WINDOW_SIZE - 20) exit(0);
+
+        if (selected) {
+            board[sel_row][sel_col].is_moving = 0;
+            selected = 0;
+            sel_row = -1;
+            sel_col = -1;
+        }
+
         draw_board();
         draw_all_pieces();
+        t += 0.001;
     }
 }
 
@@ -232,8 +240,11 @@ int main() {
     draw_all_pieces();
 
     while (1) {
-        if (G_key_down('q') == 'q') exit(0);
-        if (G_key_press() == 'f') flipped = !flipped;
+        if (G_key_down() == 'q') exit(0);
+        if (G_key_press() == 'f') {
+            flipped = !flipped;
+            animate_flip();
+        }
         update();
     }
 

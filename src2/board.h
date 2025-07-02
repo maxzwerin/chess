@@ -32,6 +32,8 @@ void draw_object(int object, double pos_x, double pos_y, struct Piece piece);
 
 void draw_all_pieces();
 
+void animate_flip();
+
 void grid_lines();
 
 void labels();

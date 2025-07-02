@@ -18,12 +18,13 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <X11/Xutil.h>// for XComposeStatus
+#include <X11/XKBlib.h>
 
 int G_init_graphics(double width, double height);
 
 int G_wait_key();
 int G_no_wait_key();
-int G_key_down(int KeyCheck);
+int G_key_down();
 int G_key_press();
 
 int S_mouse_coord_window(int * Coords);
