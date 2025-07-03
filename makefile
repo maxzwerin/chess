@@ -4,7 +4,7 @@ CFLAGS = -std=c99 -I./src -I/opt/homebrew/include
 LDFLAGS = -L/opt/X11/lib -I/opt/X11/include -lX11 -lm
 
 # Source files and object files
-SRC = $(wildcard src2/*.c)
+SRC = $(wildcard src/*.c)
 OBJ = $(SRC:src/%.c=build/%.o)
 
 # Executable name
