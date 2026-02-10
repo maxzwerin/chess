@@ -1,3 +1,6 @@
+#ifndef TYPEDEF_H
+#define TYPEDEF_H
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,7 +70,7 @@ enum PIECES {
     PAWN_W, KNIGHT_W, BISHOP_W, ROOK_W, QUEEN_W, KING_W
 };
 
-enum CASTLING {K=1, Q=2, k=4, q=8};
+enum CASTLING {K=1, Q=2, k=4, q=8, KQ=3, kq=12};
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -81,3 +84,5 @@ enum SQUARES {
     A7, B7, C7, D7, E7, F7, G7, H7,
     A8, B8, C8, D8, E8, F8, G8, H8,
 };
+
+#endif

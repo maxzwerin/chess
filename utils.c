@@ -18,14 +18,6 @@ void reset(Board* board) {
     board->fullmove = 1;
 }
 
-
-// FEN parsing using spaces
-// 0: piece placement
-// 1: side to move
-// 2: castling rights
-// 3: en passant
-// 4: halfmove
-// 5: fullmove
 void setFen(Board* board, char* fen) {
     reset(board);
 
@@ -151,4 +143,26 @@ void printChessboard(Board b) {
 
     printf("Halfmove: %d\n", b.halfmove);
     printf("Fullmove: %d\n", b.fullmove);
+}
+
+void printBitboard(U64 bb) {
+    for (int rank = 7; rank >= 0; rank--) {
+        for (int file = 0; file < 8; file++) {
+            int sq = rank * 8 + file;
+            printf("%c ", (bb & (1ULL << sq)) ? '1' : '.');
+        }
+        printf("\n");
+    }
+}
+
+void ppBB(U64 bb, int s, int p) {
+    for (int rank = 7; rank >= 0; rank--) {
+        for (int file = 0; file < 8; file++) {
+            int sq = rank * 8 + file;
+            if (sq == s) printf("%c ", p);
+            else printf("%c ", (bb & (1ULL << sq)) ? '1' : '.');
+        }
+        printf("\n");
+    }
+    printf("\n");
 }

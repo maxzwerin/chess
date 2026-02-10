@@ -1,4 +1,6 @@
 #include "raylib.h"
+#include <time.h>
+#include <unistd.h>
 
 #ifdef WHITE
 #undef WHITE
@@ -7,12 +9,12 @@
 #undef BLACK
 #endif
 
-#include "main.c"
+#include "evaluate.c"
 
 #define WIDTH 800
 #define HEIGHT 800
 
-
+int side = WHITE;
 
 int selectedSq = -1;
 int legalMap[64] = {0};
@@ -26,6 +28,17 @@ char pieceOnSquare(Board b, int sq) {
     if (b.queenBB  & mask) return (b.whiteBB & mask) ? 'Q' : 'q';
     if (b.kingBB   & mask) return (b.whiteBB & mask) ? 'K' : 'k';
     return ' ';
+}
+
+void playRandomMove(Board *board) {
+    Move moves[MAX_MOVES];
+
+    int moveCount = legalMoves(board, moves);
+    if (moveCount == 0) return;   // checkmate or stalemate
+
+    int r = rand() % moveCount;
+
+    makeMove(board, moves[r]);
 }
 
 int mouseToSquare(int tile) {
@@ -68,9 +81,7 @@ void drawBoard() {
 
             int isLight = (file + rank) % 2 == 0;
 
-            Color c = isLight
-                ? (Color){235,209,166,255}
-                : (Color){165,117,80,255};
+            Color c = isLight ? (Color){235,209,166,255} : (Color){165,117,80,255};
 
             DrawRectangle(file * tile, rank * tile, tile, tile, c);
         }
@@ -116,21 +127,18 @@ void drawPieces(Board b, int tile) {
         int x = file * tile + tile/3;
         int y = (7 - rank) * tile + tile/4;
 
-        DrawText(TextFormat("%c", p), x, y, tile/2,
-                 (Color){0,0,0,255});
+        DrawText(TextFormat("%c", p), x, y, tile/2, (Color){0,0,0,255});
     }
 }
 
 int main(void) {
-
+    srand(time(NULL));
     initMoveGen();
 
     Board board;
     Move moves[MAX_MOVES];
 
-    // setFen(&board, START_FEN);
-    setFen(&board, "r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1");
-    printChessboard(board);
+    setFen(&board, START_FEN);
 
     SetTraceLogLevel(LOG_ERROR);
     InitWindow(WIDTH, HEIGHT, "");
@@ -160,7 +168,7 @@ int main(void) {
                         moves[i].to == sq) {
 
                         makeMove(&board, moves[i]);
-                        printChessboard(board);
+                        playRandomMove(&board);
                         break;
                     }
                 }
@@ -170,12 +178,14 @@ int main(void) {
             }
 
             else if (p != ' ') {
+                if (side != WHITE) continue;
 
                 selectedSq = sq;
 
                 int moveCount = legalMoves(&board, moves);
                 buildLegalMap(moves, moveCount, selectedSq);
             }
+            printf("evaluation: %d\n", evaluate(board));
         }
 
         BeginDrawing();
