@@ -651,3 +651,15 @@ void makeMove(Board *board, Move move) {
         pushMove(board, move);
     }
 }
+
+void undoMove(Board *board, Move move) {
+    pushMove(board, move);
+}
+
+int inCheck(Board *board, int color) {
+    U64 kingBB = board->kingBB & (color ? board->whiteBB : board->blackBB);
+    int kingSq = __builtin_ctzll(kingBB);
+
+    if (isSquareAttacked(*board, kingSq)) return false;
+    return true;
+}

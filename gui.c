@@ -1,33 +1,47 @@
-#include "raylib.h"
 #include <time.h>
 #include <unistd.h>
 
-#ifdef WHITE
-#undef WHITE
-#endif
-#ifdef BLACK
-#undef BLACK
-#endif
-
+#include "raylib.h"
+#include "gui.h"
 #include "evaluate.c"
 
-#define WIDTH 800
-#define HEIGHT 800
-
 int side = WHITE;
-
 int selectedSq = -1;
 int legalMap[64] = {0};
 
-char pieceOnSquare(Board b, int sq) {
+typedef struct {
+    Texture2D tex[12];
+} PieceTextures;
+
+PieceTextures loadPieceTextures(void) {
+    PieceTextures pt;
+
+    pt.tex[PAWN_W] = LoadTexture("sprites/whitePawn.png");
+    pt.tex[KNIGHT_W] = LoadTexture("sprites/whiteKnight.png");
+    pt.tex[BISHOP_W] = LoadTexture("sprites/whiteBishop.png");
+    pt.tex[ROOK_W] = LoadTexture("sprites/whiteRook.png");
+    pt.tex[QUEEN_W] = LoadTexture("sprites/whiteQueen.png");
+    pt.tex[KING_W] = LoadTexture("sprites/whiteKing.png");
+
+    pt.tex[PAWN_B] = LoadTexture("sprites/blackPawn.png");
+    pt.tex[KNIGHT_B] = LoadTexture("sprites/blackKnight.png");
+    pt.tex[BISHOP_B] = LoadTexture("sprites/blackBishop.png");
+    pt.tex[ROOK_B] = LoadTexture("sprites/blackRook.png");
+    pt.tex[QUEEN_B] = LoadTexture("sprites/blackQueen.png");
+    pt.tex[KING_B] = LoadTexture("sprites/blackKing.png");
+
+    return pt;
+}
+
+int pieceOnSquare(Board b, int sq) {
     U64 mask = 1ULL << sq;
-    if (b.pawnBB   & mask) return (b.whiteBB & mask) ? 'P' : 'p';
-    if (b.knightBB & mask) return (b.whiteBB & mask) ? 'N' : 'n';
-    if (b.bishopBB & mask) return (b.whiteBB & mask) ? 'B' : 'b';
-    if (b.rookBB   & mask) return (b.whiteBB & mask) ? 'R' : 'r';
-    if (b.queenBB  & mask) return (b.whiteBB & mask) ? 'Q' : 'q';
-    if (b.kingBB   & mask) return (b.whiteBB & mask) ? 'K' : 'k';
-    return ' ';
+    if (b.pawnBB   & mask) return (b.whiteBB & mask) ? PAWN_W : PAWN_B;
+    if (b.knightBB & mask) return (b.whiteBB & mask) ? KNIGHT_W : KNIGHT_B;
+    if (b.bishopBB & mask) return (b.whiteBB & mask) ? BISHOP_W : BISHOP_B;
+    if (b.rookBB   & mask) return (b.whiteBB & mask) ? ROOK_W : ROOK_B;
+    if (b.queenBB  & mask) return (b.whiteBB & mask) ? QUEEN_W : QUEEN_B;
+    if (b.kingBB   & mask) return (b.whiteBB & mask) ? KING_W : KING_B;
+    return -1;
 }
 
 void playRandomMove(Board *board) {
@@ -67,9 +81,7 @@ void buildLegalMap(Move *moves, int moveCount, int fromSq) {
     for (int i = 0; i < moveCount; i++) {
         int from = moves[i].from;
         int to   = moves[i].to;
-
-        if (from == fromSq)
-            legalMap[to] = true;
+        if (from == fromSq) legalMap[to] = true;
     }
 }
 
@@ -81,7 +93,7 @@ void drawBoard() {
 
             int isLight = (file + rank) % 2 == 0;
 
-            Color c = isLight ? (Color){235,209,166,255} : (Color){165,117,80,255};
+            Color c = isLight ? rgb(235,209,166,255) : rgb(165,117,80,255);
 
             DrawRectangle(file * tile, rank * tile, tile, tile, c);
         }
@@ -89,16 +101,16 @@ void drawBoard() {
 }
 
 void drawHighlights(int tile) {
+    Vector2 size = {tile, tile};
+    Vector2 pos;
 
-    // Selected square
     if (selectedSq != -1) {
         int f = selectedSq % 8;
         int r = selectedSq / 8;
+        pos.x = f * tile;
+        pos.y = (7 - r) * tile;
 
-        int x = f * tile;
-        int y = (7 - r) * tile;
-
-        DrawRectangle(x, y, tile, tile, (Color){0,255,0,90});
+        DrawRectangleV(pos, size, rgb(0,255,0,90));
     }
 
     // Legal moves
@@ -107,33 +119,38 @@ void drawHighlights(int tile) {
 
         int f = sq % 8;
         int r = sq / 8;
+        pos.x = (sq % 8) * tile;
+        pos.y = (7 - r) * tile;
 
-        int x = f * tile;
-        int y = (7 - r) * tile;
-
-        DrawRectangle(x, y, tile, tile, (Color){255,0,0,90});
+        DrawRectangleV(pos, size, rgb(255,0,0,90));
     }
 }
 
-void drawPieces(Board b, int tile) {
+void drawPieces(Board b, PieceTextures *pt, int tile) {
+    Vector2 v2 = {0};
     for (int sq = 0; sq < 64; sq++) {
 
-        char p = pieceOnSquare(b, sq);
-        if (p == ' ') continue;
+        int p = pieceOnSquare(b, sq);
+        if (p == -1) continue;
 
         int file = sq % 8;
         int rank = sq / 8;
 
-        int x = file * tile + tile/3;
-        int y = (7 - rank) * tile + tile/4;
+        v2.x = file * tile;
+        v2.y = (7 - rank) * tile;
 
-        DrawText(TextFormat("%c", p), x, y, tile/2, (Color){0,0,0,255});
+        Texture2D tex = pt->tex[p];
+
+        double scale = (double) tile / tex.width;
+
+        DrawTextureEx(tex, v2, 0.0f, scale, rgb(255,255,255,255));
     }
 }
 
 int main(void) {
     srand(time(NULL));
     initMoveGen();
+    init_tables();
 
     Board board;
     Move moves[MAX_MOVES];
@@ -145,6 +162,8 @@ int main(void) {
     SetTargetFPS(60);
 
     int tile = WIDTH / 8;
+
+    PieceTextures pieces = loadPieceTextures();
 
     while (!WindowShouldClose()) {
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -168,7 +187,8 @@ int main(void) {
                         moves[i].to == sq) {
 
                         makeMove(&board, moves[i]);
-                        playRandomMove(&board);
+                        // playRandomMove(&board);
+                        makeMove(&board, findBestMove(&board, 4));
                         break;
                     }
                 }
@@ -185,7 +205,6 @@ int main(void) {
                 int moveCount = legalMoves(&board, moves);
                 buildLegalMap(moves, moveCount, selectedSq);
             }
-            printf("evaluation: %d\n", evaluate(board));
         }
 
         BeginDrawing();
@@ -193,11 +212,13 @@ int main(void) {
 
         drawBoard();
         drawHighlights(tile);
-        drawPieces(board, tile);
+        drawPieces(board, &pieces, tile);
+
 
         EndDrawing();
     }
 
+    for (int i = 0; i < 12; i++) UnloadTexture(pieces.tex[i]);
     CloseWindow();
     return 0;
 }
