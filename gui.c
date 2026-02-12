@@ -153,7 +153,8 @@ int main(void) {
     Board board;
     Move moves[MAX_MOVES];
 
-    setFen(&board, START_FEN);
+    // setFen(&board, START_FEN);
+    setFen(&board, "r3k3/1p3p2/p2q2p1/bn3P2/1N2PQP1/PB6/3K1R1r/3R4 w q - 0 1");
 
     SetTraceLogLevel(LOG_ERROR);
     InitWindow(WIDTH, HEIGHT, "");
@@ -185,7 +186,8 @@ int main(void) {
                         moves[i].to == sq) {
 
                         makeMove(&board, moves[i]);
-                        playRandomMove(&board);
+                        if (inCheck(&board, !board.turn)) printf("im in danger\n");
+                        // playRandomMove(&board);
                         break;
                     }
                 }
