@@ -1,4 +1,5 @@
 #include "movegen.c"
+#include <time.h>
 
 typedef unsigned long long u64;
 
@@ -76,15 +77,24 @@ u64 perft(Board *board, int depth) {
 #define COLOR_GREEN "\x1b[32m"
 #define COLOR_RESET "\x1b[0m"
 
-void ppPERFT(int success, int id, u64 got, u64 expected, char *fen) {
+void format_time(double seconds, char *out) {
+    int secs = (int)(seconds) % 60;
+    int ms   = (int)(seconds * 1000) % 1000;
+
+    sprintf(out, "%02d.%03d", secs, ms);
+}
+
+void ppPERFT(int success, int id, u64 got, u64 expected, char *fen, char *timeStr) {
     if (success) {
-        printf("%3d:" COLOR_GREEN " %-8s " COLOR_RESET "Got: %-9llu Expected: %-9llu FEN: "
-                COLOR_GREEN "%s\n" COLOR_RESET, 
-            id, "SUCCESS", got, expected, fen);
+        printf("%3d:" COLOR_GREEN " %-8s " COLOR_RESET
+               "[%s]  %llu / %llu  FEN: "
+               COLOR_GREEN "%s\n" COLOR_RESET,
+               id, "SUCCESS", timeStr, got, expected, fen);
     } else {
-        printf("%3d:" COLOR_RED " %-8s " COLOR_RESET "Got: %-9llu Expected: %-9llu FEN: "
-                COLOR_RED "%s\n" COLOR_RESET, 
-                id, "FAIL", got, expected, fen);
+        printf("%3d:" COLOR_RED " %-8s " COLOR_RESET
+               "[%s]  %llu / %llu  FEN: "
+               COLOR_RED "%s\n" COLOR_RESET,
+               id, "FAIL", timeStr, got, expected, fen);
     }
 }
 
@@ -94,25 +104,40 @@ void run_perft_suite(void) {
     int totalFens = 126;
     int totalTests = totalFens;
     int failures = 0;
+    double totalElapsed = 0;
 
     for (int f = 0; f < totalFens; f++) {
         setFen(&board, FENS[f]);
+
+        struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
 
         for (int d = 1; d <= MAX_DEPTH; d++) {
             u64 nodes = perft(&board, d);
             u64 expected = RESULTS[d-1][f];
 
             if (d == MAX_DEPTH) {
+
+                clock_gettime(CLOCK_MONOTONIC, &end);
+                double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+                totalElapsed += elapsed;
+                char timeStr[16];
+                format_time(elapsed, timeStr);
+
                 if (nodes != expected) {
                     failures++;
-                    ppPERFT(false,f,nodes,expected,FENS[f]);
+                    ppPERFT(false,f,nodes,expected,FENS[f],timeStr);
                 } else {
-                    ppPERFT(true,f,nodes,expected,FENS[f]);
+                    ppPERFT(true,f,nodes,expected,FENS[f],timeStr);
                 }
             }
         }
     }
-    printf("\nFailures: %d\n", failures);
+
+    char timeStr[16];
+    format_time(totalElapsed, timeStr);
+    if (!failures) printf("\nperft passed in [%s] seconds\n", timeStr);
+    else printf("\nperft found [%d] failures\n", failures);
 }
 
 int main(void) {

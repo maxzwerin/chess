@@ -48,7 +48,7 @@ void playRandomMove(Board *board) {
     Move moves[MAX_MOVES];
 
     int moveCount = legalMoves(board, moves);
-    if (moveCount == 0) return;   // checkmate or stalemate
+    if (moveCount == 0) return;
 
     int r = rand() % moveCount;
 
@@ -71,8 +71,7 @@ int mouseToSquare(int tile) {
 }
 
 void clearLegal() {
-    for (int i = 0; i < 64; i++)
-        legalMap[i] = false;
+    for (int i = 0; i < 64; i++) legalMap[i] = false;
 }
 
 void buildLegalMap(Move *moves, int moveCount, int fromSq) {
@@ -150,7 +149,6 @@ void drawPieces(Board b, PieceTextures *pt, int tile) {
 int main(void) {
     srand(time(NULL));
     initMoveGen();
-    init_tables();
 
     Board board;
     Move moves[MAX_MOVES];
@@ -187,8 +185,7 @@ int main(void) {
                         moves[i].to == sq) {
 
                         makeMove(&board, moves[i]);
-                        // playRandomMove(&board);
-                        makeMove(&board, findBestMove(&board, 4));
+                        playRandomMove(&board);
                         break;
                     }
                 }
@@ -197,7 +194,7 @@ int main(void) {
                 clearLegal();
             }
 
-            else if (p != ' ') {
+            else if (p != -1) {
                 if (side != WHITE) continue;
 
                 selectedSq = sq;

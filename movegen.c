@@ -1,32 +1,13 @@
 #include "typedefs.h"
 #include "utils.c"
 
-/*    LITTLE ENDIAN RANK-FILE MAPPING
-      ┌────┬────┬────┬────┬────┬────┬────┬────┐
-    8 │ 56 │ 57 │ 58 │ 59 │ 60 │ 61 │ 62 │ 63 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    7 │ 48 │ 49 │ 50 │ 51 │ 52 │ 53 │ 54 │ 55 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    6 │ 40 │ 41 │ 42 │ 43 │ 44 │ 45 │ 46 │ 47 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    5 │ 32 │ 33 │ 34 │ 35 │ 36 │ 37 │ 38 │ 39 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    4 │ 24 │ 25 │ 26 │ 27 │ 28 │ 29 │ 30 │ 31 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    3 │ 16 │ 17 │ 18 │ 19 │ 20 │ 21 │ 22 │ 23 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    2 │ 08 │ 09 │ 10 │ 11 │ 12 │ 13 │ 14 │ 15 │
-      ├────┼────┼────┼────┼────┼────┼────┼────┤
-    1 │ 00 │ 01 │ 02 │ 03 │ 04 │ 05 │ 06 │ 07 │
-      └────┴────┴────┴────┴────┴────┴────┴────┘
-        a    b    c    d    e    f    g    h   */
-
 U64 KNIGHT_REF[64];
 U64 KING_REF[64];
 U64 ROOK_REF[64];
 U64 BISHOP_REF[64];
 U64 BISHOP_ATTACKS[64][512];
 U64 ROOK_ATTACKS[64][4096];
+U64 PAWN_ATTACKS[2][64];
 
 int ROOK_RELEVANT_BITS[64] = {
     12, 11, 11, 11, 11, 11, 11, 12,
@@ -85,62 +66,35 @@ U64 occupancyMask(int index, int bits, U64 attackMask) {
     return occ;
 }
 
-U64 bishopAttacksOnTheFly(int square, U64 block) {
+U64 rayAttacks(int square, int dr, int df, U64 block) {
     U64 attacks = 0ULL;
-    int f, r;
-    int tr = square / 8;
-    int tf = square % 8;
-    
-    for (r = tr + 1, f = tf + 1; r <= 7 && f <= 7; r++, f++) {
-        attacks |= (1ULL << (r * 8 + f));
-        if (block & (1ULL << (r * 8 + f))) break;
+
+    int r = square / 8;
+    int f = square % 8;
+
+    r += dr; f += df;
+
+    while (r >= 0 && r <= 7 && f >= 0 && f <= 7) {
+        int sq = r * 8 + f;
+        U64 bit = 1ULL << sq;
+
+        attacks |= bit;
+        if (block & bit) break;
+
+        r += dr; f += df;
     }
-    
-    for (r = tr + 1, f = tf - 1; r <= 7 && f >= 0; r++, f--) {
-        attacks |= (1ULL << (r * 8 + f));
-        if (block & (1ULL << (r * 8 + f))) break;
-    }
-    
-    for (r = tr - 1, f = tf + 1; r >= 0 && f <= 7; r--, f++) {
-        attacks |= (1ULL << (r * 8 + f));
-        if (block & (1ULL << (r * 8 + f))) break;
-    }
-    
-    for (r = tr - 1, f = tf - 1; r >= 0 && f >= 0; r--, f--) {
-        attacks |= (1ULL << (r * 8 + f));
-        if (block & (1ULL << (r * 8 + f))) break;
-    }
-    
+
     return attacks;
 }
 
+U64 bishopAttacksOnTheFly(int square, U64 block) {
+    return rayAttacks(square,  1,  1, block) | rayAttacks(square,  1, -1, block) | 
+           rayAttacks(square, -1,  1, block) | rayAttacks(square, -1, -1, block);
+}
+
 U64 rookAttacksOnTheFly(int square, U64 block) {
-    U64 attacks = 0ULL;
-    int f, r;
-    int tr = square / 8;
-    int tf = square % 8;
-    
-    for (r = tr + 1; r <= 7; r++) {
-        attacks |= (1ULL << (r * 8 + tf));
-        if (block & (1ULL << (r * 8 + tf))) break;
-    }
-    
-    for (r = tr - 1; r >= 0; r--) {
-        attacks |= (1ULL << (r * 8 + tf));
-        if (block & (1ULL << (r * 8 + tf))) break;
-    }
-    
-    for (f = tf + 1; f <= 7; f++) {
-        attacks |= (1ULL << (tr * 8 + f));
-        if (block & (1ULL << (tr * 8 + f))) break;
-    }
-    
-    for (f = tf - 1; f >= 0; f--) {
-        attacks |= (1ULL << (tr * 8 + f));
-        if (block & (1ULL << (tr * 8 + f))) break;
-    }
-    
-    return attacks;
+    return rayAttacks(square,  1,  0, block) | rayAttacks(square, -1,  0, block) |
+           rayAttacks(square,  0,  1, block) | rayAttacks(square,  0, -1, block);
 }
 
 U64 bishopMovement(int square) {
@@ -173,7 +127,6 @@ U64 rookMovement(int square) {
 
 void initSliders() {
     for (int square = 0; square < 64; square++) {
-        // Fill movement masks
         BISHOP_REF[square] = bishopMovement(square);
         ROOK_REF[square] = rookMovement(square);
         
@@ -198,6 +151,15 @@ void initSliders() {
     }
 }
 
+void initPawnAttacks() {
+    for (int sq = 0; sq < 64; sq++) {
+        U64 bb = 1ULL << sq;
+
+        PAWN_ATTACKS[WHITE][sq] = ((bb << 7) & ~FILE_H) | ((bb << 9) & ~FILE_A);
+        PAWN_ATTACKS[BLACK][sq] = ((bb >> 7) & ~FILE_A) | ((bb >> 9) & ~FILE_H);
+    }
+}
+
 U64 getBishopAttacks(int square, U64 occupancy) {
 	occupancy &= BISHOP_REF[square];
 	occupancy *=  BISHOP_MAGICS[square];
@@ -216,16 +178,12 @@ U64 getKnightAttacks(int sq) {
     U64 knight = 1ULL << sq; 
     U64 FILE_AB = FILE_A | FILE_B;
     U64 FILE_GH = FILE_G | FILE_H;
-    U64 attacks = ((knight >> 15) & ~FILE_A)  |
-                  ((knight << 15) & ~FILE_H)  |
-                  ((knight << 10) & ~FILE_AB) |
-                  ((knight >> 10) & ~FILE_GH) |
-                  ((knight << 17) & ~FILE_A)  |
-                  ((knight >> 17) & ~FILE_H)  |
-                  ((knight << 6)  & ~FILE_GH) |
-                  ((knight >> 6)  & ~FILE_AB);
+    U64 attacks = ((knight >> 15) & ~FILE_A)  | ((knight << 15) & ~FILE_H)  |
+                  ((knight << 10) & ~FILE_AB) | ((knight >> 10) & ~FILE_GH) |
+                  ((knight << 17) & ~FILE_A)  | ((knight >> 17) & ~FILE_H)  |
+                  ((knight << 6)  & ~FILE_GH) | ((knight >> 6)  & ~FILE_AB);
 
-    // add a 64-bit mask to discard any "off-board" bits before returning
+    /* add a 64-bit mask to discard any "off-board" bits before returning */
     return attacks & 0xFFFFFFFFFFFFFFFF;
 }
 
@@ -236,7 +194,6 @@ U64 getKingAttacks(int sq) {
                   ((king << 7) & ~FILE_H) | ((king << 9) & ~FILE_A) |
                   (king >> 8) | (king << 8);
 
-    // add a 64-bit mask to discard any "off-board" bits before returning
     return attacks & 0xFFFFFFFFFFFFFFFF;
 }
 
@@ -272,7 +229,7 @@ U64 getPawnMoves(int square, Board board, int color) {
 
     if (board.enp >= 0) enp = 1ULL << board.enp;
 
-    attacks = getPawnAttacks(square, board, color) & (occ | enp);
+    attacks = (PAWN_ATTACKS[color][square] & (occ | enp));
 
     attacks = attacks | single | dbl;
     return attacks & ~friendly;
@@ -289,61 +246,28 @@ void initKingMovementTable(void) {
 void initMoveGen() {
     initKnightMovementTable();
     initKingMovementTable();
+    initPawnAttacks();
     initSliders();
 }
 
-// whether a given square is attacked by the opponent...
-// used to check if current players' king is in check to validate move, or
-// when castling to make sure king is not passing over attacked squares.
-// basically the king is just annoying.
 int isSquareAttacked(Board b, int sq) {
-    U64 pawn = b.turn ? b.pawnBB & b.blackBB : b.pawnBB & b.whiteBB;
-    U64 king = b.turn ? b.kingBB & b.blackBB : b.kingBB & b.whiteBB;
-    U64 knight = b.turn ? b.knightBB & b.blackBB : b.knightBB & b.whiteBB;
-    U64 bishop = b.turn ? b.bishopBB & b.blackBB : b.bishopBB & b.whiteBB;
-    U64 rook = b.turn ? b.rookBB & b.blackBB : b.rookBB & b.whiteBB;
-    U64 queen = b.turn ? b.queenBB & b.blackBB : b.queenBB & b.whiteBB;
+    U64 occ          = b.whiteBB | b.blackBB;
+    U64 enemyOcc     = b.turn ? b.blackBB : b.whiteBB;
+    U64 enemyPawns   = b.pawnBB   & enemyOcc;
+    U64 enemyKnights = b.knightBB & enemyOcc;
+    U64 enemyBishops = b.bishopBB & enemyOcc;
+    U64 enemyRooks   = b.rookBB   & enemyOcc;
+    U64 enemyQueens  = b.queenBB  & enemyOcc;
+    U64 enemyKing    = b.kingBB   & enemyOcc;
 
-    U64 occ = b.blackBB | b.whiteBB;
+    if (PAWN_ATTACKS[b.turn][sq] & enemyPawns) return 1;
+    if (KNIGHT_REF[sq] & enemyKnights) return 1;
+    if (KING_REF[sq] & enemyKing) return 1;
 
-    while (queen) {
-        int from = __builtin_ctzl(queen);
-        U64 attacks = getBishopAttacks(from, occ);
-        attacks |= getRookAttacks(from, occ);
-        if (attacks & 1ULL << sq) return true;
-        queen &= queen - 1;
-    }
-    while (bishop) {
-        int from = __builtin_ctzl(bishop);
-        U64 attacks = getBishopAttacks(from, occ);
-        if (attacks & 1ULL << sq) return true;
-        bishop &= bishop - 1;
-    }
-    while (rook) {
-        int from = __builtin_ctzl(rook);
-        U64 attacks = getRookAttacks(from, occ);
-        if (attacks & 1ULL << sq) return true;
-        rook &= rook - 1;
-    }
-    while (knight) {
-        int from = __builtin_ctzl(knight);
-        U64 attacks = KNIGHT_REF[from];
-        if (attacks & 1ULL << sq) return true;
-        knight &= knight - 1;
-    }
-    while (pawn) {
-        int from = __builtin_ctzl(pawn);
-        U64 attacks = getPawnAttacks(from, b, !b.turn);
-        if (attacks & 1ULL << sq) return true;
-        pawn &= pawn - 1;
-    }
-    while (king) {
-        int from = __builtin_ctzl(king);
-        U64 attacks = KING_REF[from];
-        if (attacks & 1ULL << sq) return true;
-        king &= king - 1;
-    }
-    return false;
+    if (getBishopAttacks(sq, occ) & (enemyBishops | enemyQueens)) return 1;
+    if (getRookAttacks(sq, occ) & (enemyRooks | enemyQueens)) return 1;
+
+    return 0;
 }
 
 void clearCastleRights(Board *board, int clear) {
@@ -357,8 +281,7 @@ void pushMove(Board *board, Move move) {
 
     int isEnp = move.to == board->enp && piece == PAWN;
 
-    // en passant management
-    // im scared of XOR but it seems to work here
+    /* en passant management */
     if (isEnp) {
         int toSq = board->enp;
         int capturedSq = board->enp + (board->turn ? -8 : 8);
@@ -379,10 +302,11 @@ void pushMove(Board *board, Move move) {
         return;
     }
 
+    /* clear en passant sq */
     board->enp = -1;
 
-    // clear castle rights if king / rook moves
-    // check if rook was captured later
+    /* clear castle rights if king / rook moves */
+    /* check if rook was captured later */
     if (board->castle) {
         if (move.piece == KING_W) clearCastleRights(board, KQ);
         if (move.piece == KING_B) clearCastleRights(board, kq);
@@ -394,7 +318,7 @@ void pushMove(Board *board, Move move) {
         if (move.piece == ROOK_B && move.from == A8) clearCastleRights(board, q);
     }
 
-    // deal with castling
+    /* deal with castling */
     if (move.castle) {
         if (move.castle == K) {
             board->kingBB  &= ~(1ULL << E1); board->kingBB  |= 1ULL << G1;
@@ -418,7 +342,7 @@ void pushMove(Board *board, Move move) {
             board->blackBB &= ~(1ULL << A8); board->blackBB |= 1ULL << D8;
         }
 
-        // clear castle rights for color and return
+        /* clear castle rights for color and return */
         if (turn) clearCastleRights(board, KQ);
         else clearCastleRights(board, kq);
 
@@ -432,19 +356,20 @@ void pushMove(Board *board, Move move) {
 
     U64 toMask = 1ULL << move.to;
 
-    // pick up piece
+    /* pick up piece, wait to put down*/
     *pieceThatMovedBB ^= 1ULL << move.from; *curColorBB ^= 1ULL << move.from;
 
-    // check if piece has been captured
+    /* check if piece has been captured */
     if (*oppColorBB & toMask) {
         *oppColorBB ^= toMask;
 
         for (int p = 0; p < 6; p++) {
             U64 *bb = (&board->pawnBB + p);
             if (*bb & toMask) {
-                *bb ^= toMask; // remove from piece BB
+                *bb ^= toMask; /* remove from piece BB */
 
-                // if rook was captured from starting sq, clear its castle rights
+                /* now check if rook was captured from starting sq.
+                 * if so, clear its castle rights */
                 if (p == ROOK && move.to == H1) clearCastleRights(board, K);
                 if (p == ROOK && move.to == A1) clearCastleRights(board, Q);
                 if (p == ROOK && move.to == H8) clearCastleRights(board, k);
@@ -455,7 +380,7 @@ void pushMove(Board *board, Move move) {
         }
     }
 
-    // check if promotion / put down piece
+    /* check if promotion / put down piece */
     if (piece == PAWN && move.promo) {
         U64 promoMask = 1ULL << move.to;
         U64 *promoBB = (&board->pawnBB + move.promo % 6);
@@ -465,7 +390,7 @@ void pushMove(Board *board, Move move) {
         *pieceThatMovedBB |= 1ULL << move.to; *curColorBB |= 1ULL << move.to;
     }
 
-    // set en passant
+    /* set en passant if double move from pawns starting rank */
     U64 startRank = turn ? RANK_2 : RANK_7;
     if (piece == PAWN && (fromMask & startRank)) {
         if (abs(move.from - move.to) == 16) {
@@ -473,6 +398,7 @@ void pushMove(Board *board, Move move) {
         }
     }
 
+    /* finally switch turn */
     board->turn = !turn;
     return;
 }
@@ -482,7 +408,7 @@ int validateMove(Board board, Move* move) {
     int kingSq = -1;
 
     if (move->castle) {
-        // does king travel over attacked squares?
+        /* does king travel over attacked squares? */
         int sq;
         if (move->castle == K) sq = F1;
         if (move->castle == Q) sq = D1;
@@ -499,7 +425,7 @@ int validateMove(Board board, Move* move) {
     Board cpy = board;
     pushMove(&cpy, *move);
 
-    // is king attacked after the move is made?
+    /* is king attacked after the move is made? */
     kingBB = cpy.kingBB & (cpy.turn ? cpy.blackBB : cpy.whiteBB);
     cpy.turn = !cpy.turn;
     kingSq = __builtin_ctzll(kingBB);
@@ -525,7 +451,7 @@ int canCastle(Board *board, int right, U64 occ) {
     return 1;
 }
 
-// generate all legal moves for the given board
+/* generate all legal moves for the given board */
 int legalMoves(Board *board, Move moves[]) {
     int length = 0;
 
@@ -543,7 +469,7 @@ int legalMoves(Board *board, Move moves[]) {
 
     U64 attackMask = 0ULL;
 
-    // generate all piece movement
+    /* generate all piece movement */
     while (pawnBB) {
         int sq = __builtin_ctzll(pawnBB);
         attackMask = getPawnMoves(sq, *board, turn);
@@ -612,8 +538,8 @@ int legalMoves(Board *board, Move moves[]) {
     }
     while (queenBB) {
         int sq = __builtin_ctzll(queenBB);
-        attackMask = getRookAttacks(sq, occupancy) & ~friendly;
-        attackMask |= getBishopAttacks(sq, occupancy) & ~friendly;
+        attackMask = (getRookAttacks(sq, occupancy) | 
+            getBishopAttacks(sq, occupancy)) & ~friendly;
 
         while (attackMask) {
             int to = __builtin_ctzll(attackMask);
@@ -652,10 +578,6 @@ void makeMove(Board *board, Move move) {
     }
 }
 
-void undoMove(Board *board, Move move) {
-    pushMove(board, move);
-}
-
 int inCheck(Board *board, int color) {
     U64 kingBB = board->kingBB & (color ? board->whiteBB : board->blackBB);
     int kingSq = __builtin_ctzll(kingBB);
@@ -663,3 +585,9 @@ int inCheck(Board *board, int color) {
     if (isSquareAttacked(*board, kingSq)) return false;
     return true;
 }
+
+void makemove(Board *board, Move move, Undo *undo);
+void undoMove(Board *board, Undo *undo);
+int getTurn();
+int inCheckmate();
+int inDraw();

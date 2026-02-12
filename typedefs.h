@@ -6,25 +6,54 @@
 #include <stdlib.h>
 #include <assert.h>
 
+/*    LITTLE ENDIAN RANK-FILE MAPPING
+      ┌────┬────┬────┬────┬────┬────┬────┬────┐
+    8 │ 56 │ 57 │ 58 │ 59 │ 60 │ 61 │ 62 │ 63 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    7 │ 48 │ 49 │ 50 │ 51 │ 52 │ 53 │ 54 │ 55 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    6 │ 40 │ 41 │ 42 │ 43 │ 44 │ 45 │ 46 │ 47 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    5 │ 32 │ 33 │ 34 │ 35 │ 36 │ 37 │ 38 │ 39 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    4 │ 24 │ 25 │ 26 │ 27 │ 28 │ 29 │ 30 │ 31 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    3 │ 16 │ 17 │ 18 │ 19 │ 20 │ 21 │ 22 │ 23 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    2 │ 08 │ 09 │ 10 │ 11 │ 12 │ 13 │ 14 │ 15 │
+      ├────┼────┼────┼────┼────┼────┼────┼────┤
+    1 │ 00 │ 01 │ 02 │ 03 │ 04 │ 05 │ 06 │ 07 │
+      └────┴────┴────┴────┴────┴────┴────┴────┘
+        a    b    c    d    e    f    g    h   */
+
+#define MAX_MOVES 218
+
+#define BLACK 0
+#define WHITE 1
+
+/* instead of including <bool.h>... */
+#define false 0
+#define true 1
+
 typedef uint64_t U64;
 
 typedef struct {
-    U64 whiteBB;   // White pieces
-    U64 blackBB;   // Black pieces
-    U64 pawnBB;    // Pawns
-    U64 knightBB;  // Knights
-    U64 bishopBB;  // Bishops
-    U64 rookBB;    // Rooks
-    U64 queenBB;   // Queens
-    U64 kingBB;    // Kings
+    U64 whiteBB;   /* White pieces */
+    U64 blackBB;   /* Black pieces */
+    U64 pawnBB;    /* Pawns */
+    U64 knightBB;  /* Knights */
+    U64 bishopBB;  /* Bishops */
+    U64 rookBB;    /* Rooks */
+    U64 queenBB;   /* Queens */
+    U64 kingBB;    /* Kings */
 
-    int enp;       // 0-63 en passant position, -1 if null
-    int castle;    // Castling rights
-    int turn;      // Current turn (WHITE or BLACK)
-    int fullmove;  // Fullmove++ on every move
-    int halfmove;  // Halfmove++ on every move, 
-                   // Halfmove = 0 on any capture/pawn push
-                   // If Halfmove >= 100, game ends in a draw
+    int enp;       /* 0-63 en passant position, -1 if null */
+    int castle;    /* Castling rights */
+    int turn;      /* Current turn (WHITE or BLACK) */
+    int fullmove;  /* Fullmove++ on every move */
+    int halfmove;  /* Halfmove++ on every move,
+                    * Halfmove = 0 on capture/pawn push
+                    * If Halfmove >= 100, draw the game */
 } Board;
 
 typedef struct {
@@ -35,7 +64,40 @@ typedef struct {
     int piece;
 } Move;
 
+typedef uint32_t MOVE;
 #define ENCODE_MOVE(FROM, TO, PROMO, CASTLE, PIECE) {.from=FROM, .to=TO, .promo=PROMO, .castle=CASTLE, .piece=PIECE}
+
+typedef struct {
+    int capture; /* Captured piece */
+    int castle;  /* Previous castling rights */
+    int enp;     /* Previous en passant square */
+} Undo;
+
+enum PIECE { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
+
+enum PIECES {
+    PAWN_B, KNIGHT_B, BISHOP_B, ROOK_B, QUEEN_B, KING_B,
+    PAWN_W, KNIGHT_W, BISHOP_W, ROOK_W, QUEEN_W, KING_W
+};
+
+/* fun bit stuff to get castling rights
+ * K  = 0b0001  |  k  = 0b0100
+ * Q  = 0b0010  |  q  = 0b1000
+ * KQ = 0b0011  |  kq = 0b1100  */
+enum CASTLING {K=1, Q=2, k=4, q=8, KQ=3, kq=12};
+
+#define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+enum SQUARES { 
+    A1, B1, C1, D1, E1, F1, G1, H1,
+    A2, B2, C2, D2, E2, F2, G2, H2,
+    A3, B3, C3, D3, E3, F3, G3, H3,
+    A4, B4, C4, D4, E4, F4, G4, H4,
+    A5, B5, C5, D5, E5, F5, G5, H5,
+    A6, B6, C6, D6, E6, F6, G6, H6,
+    A7, B7, C7, D7, E7, F7, G7, H7,
+    A8, B8, C8, D8, E8, F8, G8, H8,
+};
 
 #define RANK_1 0x00000000000000ffULL
 #define RANK_2 0x000000000000ff00ULL
@@ -54,35 +116,5 @@ typedef struct {
 #define FILE_F 0x2020202020202020ULL
 #define FILE_G 0x4040404040404040ULL
 #define FILE_H 0x8080808080808080ULL
-
-#define BLACK 0
-#define WHITE 1
-
-#define false 0
-#define true 1
-
-#define MAX_MOVES 218
-
-enum { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
-
-enum PIECES {
-    PAWN_B, KNIGHT_B, BISHOP_B, ROOK_B, QUEEN_B, KING_B,
-    PAWN_W, KNIGHT_W, BISHOP_W, ROOK_W, QUEEN_W, KING_W
-};
-
-enum CASTLING {K=1, Q=2, k=4, q=8, KQ=3, kq=12};
-
-#define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-enum SQUARES { 
-    A1, B1, C1, D1, E1, F1, G1, H1,
-    A2, B2, C2, D2, E2, F2, G2, H2,
-    A3, B3, C3, D3, E3, F3, G3, H3,
-    A4, B4, C4, D4, E4, F4, G4, H4,
-    A5, B5, C5, D5, E5, F5, G5, H5,
-    A6, B6, C6, D6, E6, F6, G6, H6,
-    A7, B7, C7, D7, E7, F7, G7, H7,
-    A8, B8, C8, D8, E8, F8, G8, H8,
-};
 
 #endif
