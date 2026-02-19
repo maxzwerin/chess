@@ -1,5 +1,7 @@
 #include "gui.h"
 
+#define MAX_UNDO 256
+
 int side = WHITE;
 int selectedSq = -1;
 int legalMap[64] = {0};
@@ -148,7 +150,12 @@ int main(void) {
 
     PieceTextures pieces = loadPieceTextures();
 
+    Move moveStack[MAX_UNDO];
+    Undo undoStack[MAX_UNDO];
+    int stackTop = 0;  // points to next free slot
+
     while (!WindowShouldClose()) {
+
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
 
             int sq = mouseToSquare(tile);
@@ -160,7 +167,6 @@ int main(void) {
                 selectedSq = -1;
                 clearLegal();
             }
-
             else if (selectedSq != -1 && legalMap[sq]) {
 
                 int moveCount = legalMoves(&board, moves);
@@ -168,15 +174,20 @@ int main(void) {
                 for (int i = 0; i < moveCount; i++) {
                     if (EXTRACT_FROM(moves[i]) == selectedSq && EXTRACT_TO(moves[i]) == sq) {
 
-                        makeMove(&board, moves[i]);
+                        if (stackTop < MAX_UNDO) {
+                            moveStack[stackTop] = moves[i];
+                            doMove(&board, moves[i], &undoStack[stackTop]);
+                            stackTop++;  // push onto stack
+                        } else {
+                            printf("Undo stack full!\n");
+                        }
+
+                        selectedSq = -1;
+                        clearLegal();
                         break;
                     }
                 }
-
-                selectedSq = -1;
-                clearLegal();
             }
-
             else if (p != -1) {
                 if (side != WHITE) continue;
 
@@ -187,13 +198,18 @@ int main(void) {
             }
         }
 
+        /* UNDO */
+        if (IsKeyPressed(KEY_U) && stackTop > 0) {
+            stackTop--;  // pop last move
+            undoMove(&board, moveStack[stackTop], &undoStack[stackTop]);
+        }
+
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
         drawBoard();
         drawHighlights(tile);
         drawPieces(board, &pieces, tile);
-
 
         EndDrawing();
     }

@@ -8,9 +8,9 @@
 
 typedef unsigned long long u64;
 
-u64 perft(Board *board, int depth) {
-    if (depth == 0)
-        return 1ULL;
+u64 perft(Board *board, int depth, int ply) {
+    Undo undo;
+    if (depth == 0) return 1ULL;
 
     Move moves[MAX_MOVES];
     int count = legalMoves(board, moves);
@@ -18,12 +18,9 @@ u64 perft(Board *board, int depth) {
     u64 nodes = 0ULL;
 
     for (int i = 0; i < count; i++) {
-        Board copy = *board;
-
-        doMove(board, moves[i]);
-        nodes += perft(board, depth - 1);
-
-        *board = copy;
+        doMove(board, moves[i], &undo);
+        nodes += perft(board, depth - 1, ply + 1);
+        undoMove(board, moves[i], &undo);
     }
 
     return nodes;
@@ -36,7 +33,7 @@ u64 perft(Board *board, int depth) {
 #define COLOR_RESET "\x1b[0m"
 
 void format_time(double seconds, char *out) {
-    int ms   = (int)(seconds * 1000) % 1000;
+    int ms = (int)(seconds * 1000) % 1000;
     sprintf(out, "%d", ms);
 }
 
@@ -106,7 +103,7 @@ void run_perft_suite(void) {
         clock_gettime(CLOCK_MONOTONIC, &start);
 
         for (int d = 1; d <= MAX_DEPTH; d++) {
-            u64 nodes = perft(&board, d);
+            u64 nodes = perft(&board, d, 0);
             u64 expected = DEPTH5_RESULTS[f];
 
             if (d == MAX_DEPTH) {

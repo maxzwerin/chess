@@ -56,17 +56,10 @@ typedef struct {
 } Board;
 
 typedef struct {
-    int castle;
-    int enp;
-    int capturedPiece;   // -1 if none, otherwise 0–5
-    int wasEnPassant;
-    int wasCastle;
+    int capture; // Captured piece
+    int enp;     // Previous en passant square
+    int castle;  // Previous castling rights
 } Undo;
-// typedef struct {
-//     int capture; /* Captured piece */
-//     int castle;  /* Previous castling rights */
-//     int enp;     /* Previous en passant square */
-// } Undo;
 
 enum PIECE { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
@@ -109,6 +102,14 @@ typedef uint32_t Move;
 #define EXTRACT_TO(m)    (((m) >> 6)  & 0x3f)
 #define EXTRACT_PIECE(m) (((m) >> 12) & 0xf)
 #define EXTRACT_FLAG(m)  (((m) >> 16) & 0xf)
+
+#define SWITCH_SIDE(x) (x->turn ^= 1)
+
+#define POP_LSB(bb) ({              \
+    int sq = __builtin_ctzll(bb);   \
+    bb &= bb - 1;                   \
+    sq;                             \
+})
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
