@@ -1,6 +1,11 @@
 #include "movegen.c"
 #include <time.h>
 
+// COMPILE WITH:
+// clang perft.c -O3 -march=native -flto
+// -------------------------------------
+// currently running at ~ [7.80s]
+
 typedef unsigned long long u64;
 
 u64 perft(Board *board, int depth) {
@@ -15,7 +20,7 @@ u64 perft(Board *board, int depth) {
     for (int i = 0; i < count; i++) {
         Board copy = *board;
 
-        pushMove(board, moves[i]);
+        doMove(board, moves[i]);
         nodes += perft(board, depth - 1);
 
         *board = copy;

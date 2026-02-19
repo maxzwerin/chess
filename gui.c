@@ -1,9 +1,4 @@
-#include <time.h>
-#include <unistd.h>
-
-#include "raylib.h"
 #include "gui.h"
-#include "evaluate.c"
 
 int side = WHITE;
 int selectedSq = -1;
@@ -44,17 +39,6 @@ int pieceOnSquare(Board b, int sq) {
     return -1;
 }
 
-void playRandomMove(Board *board) {
-    Move moves[MAX_MOVES];
-
-    int moveCount = legalMoves(board, moves);
-    if (moveCount == 0) return;
-
-    int r = rand() % moveCount;
-
-    makeMove(board, moves[r]);
-}
-
 int mouseToSquare(int tile) {
     Vector2 m = GetMousePosition();
 
@@ -78,8 +62,8 @@ void buildLegalMap(Move *moves, int moveCount, int fromSq) {
     clearLegal();
 
     for (int i = 0; i < moveCount; i++) {
-        int from = moves[i].from;
-        int to   = moves[i].to;
+        int from = EXTRACT_FROM(moves[i]);
+        int to = EXTRACT_TO(moves[i]);
         if (from == fromSq) legalMap[to] = true;
     }
 }
@@ -154,7 +138,7 @@ int main(void) {
     Move moves[MAX_MOVES];
 
     // setFen(&board, START_FEN);
-    setFen(&board, "r3k3/1p3p2/p2q2p1/bn3P2/1N2PQP1/PB6/3K1R1r/3R4 w q - 0 1");
+    setFen(&board, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1");
 
     SetTraceLogLevel(LOG_ERROR);
     InitWindow(WIDTH, HEIGHT, "");
@@ -182,12 +166,9 @@ int main(void) {
                 int moveCount = legalMoves(&board, moves);
 
                 for (int i = 0; i < moveCount; i++) {
-                    if (moves[i].from == selectedSq &&
-                        moves[i].to == sq) {
+                    if (EXTRACT_FROM(moves[i]) == selectedSq && EXTRACT_TO(moves[i]) == sq) {
 
                         makeMove(&board, moves[i]);
-                        if (inCheck(&board, !board.turn)) printf("im in danger\n");
-                        // playRandomMove(&board);
                         break;
                     }
                 }

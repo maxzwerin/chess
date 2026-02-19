@@ -26,52 +26,47 @@
       └────┴────┴────┴────┴────┴────┴────┴────┘
         a    b    c    d    e    f    g    h   */
 
-#define MAX_MOVES 218
+#define MAX_MOVES 218 // Maximum possible number of moves in any position
 
 #define BLACK 0
 #define WHITE 1
 
-/* instead of including <bool.h>... */
 #define false 0
 #define true 1
 
 typedef uint64_t U64;
 
 typedef struct {
-    U64 whiteBB;   /* White pieces */
-    U64 blackBB;   /* Black pieces */
-    U64 pawnBB;    /* Pawns */
-    U64 knightBB;  /* Knights */
-    U64 bishopBB;  /* Bishops */
-    U64 rookBB;    /* Rooks */
-    U64 queenBB;   /* Queens */
-    U64 kingBB;    /* Kings */
+    U64 whiteBB;
+    U64 blackBB;
+    U64 pawnBB;
+    U64 knightBB;
+    U64 bishopBB;
+    U64 rookBB;
+    U64 queenBB;
+    U64 kingBB;
 
-    int enp;       /* 0-63 en passant position, -1 if null */
-    int castle;    /* Castling rights */
-    int turn;      /* Current turn (WHITE or BLACK) */
-    int fullmove;  /* Fullmove++ on every move */
-    int halfmove;  /* Halfmove++ on every move,
-                    * Halfmove = 0 on capture/pawn push
-                    * If Halfmove >= 100, draw the game */
+    int enp;      // 0-63 en passant position, -1 if null
+    int castle;   // Castling rights
+    int turn;     // Current turn (WHITE or BLACK)
+    int fullmove; // Fullmove++ on every move
+    int halfmove; // Halfmove++ on every move,
+                  // Halfmove = 0 on capture/pawn push
+                  // If Halfmove >= 100, draw the game
 } Board;
 
 typedef struct {
-    int from;
-    int to;
-    int promo;
     int castle;
-    int piece;
-} Move;
-
-typedef uint32_t MOVE;
-#define ENCODE_MOVE(FROM, TO, PROMO, CASTLE, PIECE) {.from=FROM, .to=TO, .promo=PROMO, .castle=CASTLE, .piece=PIECE}
-
-typedef struct {
-    int capture; /* Captured piece */
-    int castle;  /* Previous castling rights */
-    int enp;     /* Previous en passant square */
+    int enp;
+    int capturedPiece;   // -1 if none, otherwise 0–5
+    int wasEnPassant;
+    int wasCastle;
 } Undo;
+// typedef struct {
+//     int capture; /* Captured piece */
+//     int castle;  /* Previous castling rights */
+//     int enp;     /* Previous en passant square */
+// } Undo;
 
 enum PIECE { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING };
 
@@ -85,6 +80,35 @@ enum PIECES {
  * Q  = 0b0010  |  q  = 0b1000
  * KQ = 0b0011  |  kq = 0b1100  */
 enum CASTLING {K=1, Q=2, k=4, q=8, KQ=3, kq=12};
+
+/* from     + 6 bits | 0-63 board position
+ * to       + 6 bits | 0-63 board position
+ * piece    + 4 bits | piece
+ * flag     + 4 bits | determines how flag is encoded
+ * --------------------------------
+ *           20 !! room to spare !! */
+typedef uint32_t Move;
+
+#define EMPTY_FLAG 0
+#define CASTLE_FLAG 1
+#define CAPTURE_FLAG 4
+#define PROMO_FLAG 8
+#define KNIGHT_PROMO_FLAG 8
+#define ROOK_PROMO_FLAG 9
+#define BISHOP_PROMO_FLAG 10
+#define QUEEN_PROMO_FLAG 11
+
+#define ENCODE_MOVE(from, to, piece, flag) \
+    (((from) & 0x3f) | (((to) & 0x3f) << 6) | (((piece) & 0xf) << 12) | (((flag) & 0xf) << 16))
+
+#define IS_PROMO(flag) ((int)((flag) & PROMO_FLAG))
+#define PROMO_PT(flag) ((flag & 0x3) + KNIGHT)
+#define IS_CASTLE(flag) ((flag) == CASTLE_FLAG)
+
+#define EXTRACT_FROM(m)  (((m) >> 0)  & 0x3f)
+#define EXTRACT_TO(m)    (((m) >> 6)  & 0x3f)
+#define EXTRACT_PIECE(m) (((m) >> 12) & 0xf)
+#define EXTRACT_FLAG(m)  (((m) >> 16) & 0xf)
 
 #define START_FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

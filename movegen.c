@@ -1,13 +1,12 @@
-#include "typedefs.h"
 #include "utils.c"
 
 U64 KNIGHT_REF[64];
 U64 KING_REF[64];
 U64 ROOK_REF[64];
 U64 BISHOP_REF[64];
+U64 PAWN_ATTACKS[2][64];
 U64 BISHOP_ATTACKS[64][512];
 U64 ROOK_ATTACKS[64][4096];
-U64 PAWN_ATTACKS[2][64];
 
 int ROOK_RELEVANT_BITS[64] = {
     12, 11, 11, 11, 11, 11, 11, 12,
@@ -19,7 +18,6 @@ int ROOK_RELEVANT_BITS[64] = {
     11, 10, 10, 10, 10, 10, 10, 11,
     12, 11, 11, 11, 11, 11, 11, 12
 };
-
 int BISHOP_RELEVANT_BITS[64] = {
     6, 5, 5, 5, 5, 5, 5, 6,
     5, 5, 5, 5, 5, 5, 5, 5,
@@ -31,26 +29,54 @@ int BISHOP_RELEVANT_BITS[64] = {
     6, 5, 5, 5, 5, 5, 5, 6
 };
 
-const U64 ROOK_MAGICS[64] = {
-    0xa8002c000108020ULL, 0x6c00049b0002001ULL, 0x100200010090040ULL, 0x2480041000800801ULL, 0x280028004000800ULL, 0x900410008040022ULL, 0x280020001001080ULL, 0x2880002041000080ULL,
-    0xa000800080400034ULL, 0x4808020004000ULL, 0x2290802004801000ULL, 0x411000d00100020ULL, 0x402800800040080ULL, 0xb000401004208ULL, 0x2409000100040200ULL, 0x1002100004082ULL,
-    0x22878001e24000ULL, 0x1090810021004010ULL, 0x801030040200012ULL, 0x500808008001000ULL, 0xa08018014000880ULL, 0x8000808004000200ULL, 0x201008080010200ULL, 0x801020000441091ULL,
-    0x800080204005ULL, 0x1040200040100048ULL, 0x120200402082ULL, 0xd14880480100080ULL, 0x12040280080080ULL, 0x100040080020080ULL, 0x9020010080800200ULL, 0x813241200148449ULL,
-    0x491604001800080ULL, 0x100401000402001ULL, 0x4820010021001040ULL, 0x400402202000812ULL, 0x209009005000802ULL, 0x810800601800400ULL, 0x4301083214000150ULL, 0x204026458e001401ULL,
-    0x40204000808000ULL, 0x8001008040010020ULL, 0x8410820820420010ULL, 0x1003001000090020ULL, 0x804040008008080ULL, 0x12000810020004ULL, 0x1000100200040208ULL, 0x430000a044020001ULL,
-    0x280009023410300ULL, 0xe0100040002240ULL, 0x200100401700ULL, 0x2244100408008080ULL, 0x8000400801980ULL, 0x2000810040200ULL, 0x8010100228810400ULL, 0x2000009044210200ULL,
-    0x4080008040102101ULL, 0x40002080411d01ULL, 0x2005524060000901ULL, 0x502001008400422ULL, 0x489a000810200402ULL, 0x1004400080a13ULL, 0x4000011008020084ULL, 0x26002114058042ULL,
+U64 ROOK_MAGICS[64] = {
+    0xa8002c000108020ULL,  0x6c00049b0002001ULL,  0x100200010090040ULL,
+    0x2480041000800801ULL, 0x280028004000800ULL,  0x900410008040022ULL,
+    0x280020001001080ULL,  0x2880002041000080ULL, 0xa000800080400034ULL,
+    0x4808020004000ULL,    0x2290802004801000ULL, 0x411000d00100020ULL,
+    0x402800800040080ULL,  0xb000401004208ULL,    0x2409000100040200ULL,
+    0x1002100004082ULL,    0x22878001e24000ULL,   0x1090810021004010ULL,
+    0x801030040200012ULL,  0x500808008001000ULL,  0xa08018014000880ULL,
+    0x8000808004000200ULL, 0x201008080010200ULL,  0x801020000441091ULL,
+    0x800080204005ULL,     0x1040200040100048ULL, 0x120200402082ULL,
+    0xd14880480100080ULL,  0x12040280080080ULL,   0x100040080020080ULL,
+    0x9020010080800200ULL, 0x813241200148449ULL,  0x491604001800080ULL,
+    0x100401000402001ULL,  0x4820010021001040ULL, 0x400402202000812ULL,
+    0x209009005000802ULL,  0x810800601800400ULL,  0x4301083214000150ULL,
+    0x204026458e001401ULL, 0x40204000808000ULL,   0x8001008040010020ULL,
+    0x8410820820420010ULL, 0x1003001000090020ULL, 0x804040008008080ULL,
+    0x12000810020004ULL,   0x1000100200040208ULL, 0x430000a044020001ULL,
+    0x280009023410300ULL,  0xe0100040002240ULL,   0x200100401700ULL,
+    0x2244100408008080ULL, 0x8000400801980ULL,    0x2000810040200ULL,
+    0x8010100228810400ULL, 0x2000009044210200ULL, 0x4080008040102101ULL,
+    0x40002080411d01ULL,   0x2005524060000901ULL, 0x502001008400422ULL,
+    0x489a000810200402ULL, 0x1004400080a13ULL,    0x4000011008020084ULL,
+    0x26002114058042ULL,
 };
 
-const U64 BISHOP_MAGICS[64] = {
-    0x89a1121896040240ULL, 0x2004844802002010ULL, 0x2068080051921000ULL, 0x62880a0220200808ULL, 0x4042004000000ULL, 0x100822020200011ULL, 0xc00444222012000aULL, 0x28808801216001ULL,
-    0x400492088408100ULL, 0x201c401040c0084ULL, 0x840800910a0010ULL, 0x82080240060ULL, 0x2000840504006000ULL, 0x30010c4108405004ULL, 0x1008005410080802ULL, 0x8144042209100900ULL,
-    0x208081020014400ULL, 0x4800201208ca00ULL, 0xf18140408012008ULL, 0x1004002802102001ULL, 0x841000820080811ULL, 0x40200200a42008ULL, 0x800054042000ULL, 0x88010400410c9000ULL,
-    0x520040470104290ULL, 0x1004040051500081ULL, 0x2002081833080021ULL, 0x400c00c010142ULL, 0x941408200c002000ULL, 0x658810000806011ULL, 0x188071040440a00ULL, 0x4800404002011c00ULL,
-    0x104442040404200ULL, 0x511080202091021ULL, 0x4022401120400ULL, 0x80c0040400080120ULL, 0x8040010040820802ULL, 0x480810700020090ULL, 0x102008e00040242ULL, 0x809005202050100ULL,
-    0x8002024220104080ULL, 0x431008804142000ULL, 0x19001802081400ULL, 0x200014208040080ULL, 0x3308082008200100ULL, 0x41010500040c020ULL, 0x4012020c04210308ULL, 0x208220a202004080ULL,
-    0x111040120082000ULL, 0x6803040141280a00ULL, 0x2101004202410000ULL, 0x8200000041108022ULL, 0x21082088000ULL, 0x2410204010040ULL, 0x40100400809000ULL, 0x822088220820214ULL,
-    0x40808090012004ULL, 0x910224040218c9ULL, 0x402814422015008ULL, 0x90014004842410ULL, 0x1000042304105ULL, 0x10008830412a00ULL, 0x2520081090008908ULL, 0x40102000a0a60140ULL,
+U64 BISHOP_MAGICS[64] = {
+    0x89a1121896040240ULL, 0x2004844802002010ULL, 0x2068080051921000ULL,
+    0x62880a0220200808ULL, 0x4042004000000ULL,    0x100822020200011ULL,
+    0xc00444222012000aULL, 0x28808801216001ULL,   0x400492088408100ULL,
+    0x201c401040c0084ULL,  0x840800910a0010ULL,   0x82080240060ULL,
+    0x2000840504006000ULL, 0x30010c4108405004ULL, 0x1008005410080802ULL,
+    0x8144042209100900ULL, 0x208081020014400ULL,  0x4800201208ca00ULL,
+    0xf18140408012008ULL,  0x1004002802102001ULL, 0x841000820080811ULL,
+    0x40200200a42008ULL,   0x800054042000ULL,     0x88010400410c9000ULL,
+    0x520040470104290ULL,  0x1004040051500081ULL, 0x2002081833080021ULL,
+    0x400c00c010142ULL,    0x941408200c002000ULL, 0x658810000806011ULL,
+    0x188071040440a00ULL,  0x4800404002011c00ULL, 0x104442040404200ULL,
+    0x511080202091021ULL,  0x4022401120400ULL,    0x80c0040400080120ULL,
+    0x8040010040820802ULL, 0x480810700020090ULL,  0x102008e00040242ULL,
+    0x809005202050100ULL,  0x8002024220104080ULL, 0x431008804142000ULL,
+    0x19001802081400ULL,   0x200014208040080ULL,  0x3308082008200100ULL,
+    0x41010500040c020ULL,  0x4012020c04210308ULL, 0x208220a202004080ULL,
+    0x111040120082000ULL,  0x6803040141280a00ULL, 0x2101004202410000ULL,
+    0x8200000041108022ULL, 0x21082088000ULL,      0x2410204010040ULL,
+    0x40100400809000ULL,   0x822088220820214ULL,  0x40808090012004ULL,
+    0x910224040218c9ULL,   0x402814422015008ULL,  0x90014004842410ULL,
+    0x1000042304105ULL,    0x10008830412a00ULL,   0x2520081090008908ULL,
+    0x40102000a0a60140ULL,
 };
 
 U64 occupancyMask(int index, int bits, U64 attackMask) {
@@ -274,12 +300,17 @@ void clearCastleRights(Board *board, int clear) {
     board->castle &= ~clear;
 }
 
-void pushMove(Board *board, Move move) {
-    int piece = move.piece % 6;
-    int turn = board->turn;
-    U64 fromMask = 1ULL << move.from;
+void doMove(Board *board, Move move) {
+    int from  = EXTRACT_FROM(move);
+    int to    = EXTRACT_TO(move);
+    int piece = EXTRACT_PIECE(move);
+    int flag  = EXTRACT_FLAG(move);
 
-    int isEnp = move.to == board->enp && piece == PAWN;
+    int turn = board->turn;
+    U64 fromMask = 1ULL << from;
+    int pieceAgnostic = piece % 6;
+
+    int isEnp = (to == board->enp) && (pieceAgnostic == PAWN);
 
     /* en passant management */
     if (isEnp) {
@@ -308,34 +339,34 @@ void pushMove(Board *board, Move move) {
     /* clear castle rights if king / rook moves */
     /* check if rook was captured later */
     if (board->castle) {
-        if (move.piece == KING_W) clearCastleRights(board, KQ);
-        if (move.piece == KING_B) clearCastleRights(board, kq);
+        if      (piece == KING_W) clearCastleRights(board, KQ);
+        else if (piece == KING_B) clearCastleRights(board, kq);
 
-        if (move.piece == ROOK_W && move.from == H1) clearCastleRights(board, K);
-        if (move.piece == ROOK_W && move.from == A1) clearCastleRights(board, Q);
+        if      (piece == ROOK_W && from == H1) clearCastleRights(board, K);
+        else if (piece == ROOK_W && from == A1) clearCastleRights(board, Q);
 
-        if (move.piece == ROOK_B && move.from == H8) clearCastleRights(board, k);
-        if (move.piece == ROOK_B && move.from == A8) clearCastleRights(board, q);
+        if      (piece == ROOK_B && from == H8) clearCastleRights(board, k);
+        else if (piece == ROOK_B && from == A8) clearCastleRights(board, q);
     }
 
     /* deal with castling */
-    if (move.castle) {
-        if (move.castle == K) {
+    if (IS_CASTLE(flag)) {
+        if (piece == K) {
             board->kingBB  &= ~(1ULL << E1); board->kingBB  |= 1ULL << G1;
             board->whiteBB &= ~(1ULL << E1); board->whiteBB |= 1ULL << G1;
             board->rookBB  &= ~(1ULL << H1); board->rookBB  |= 1ULL << F1;
             board->whiteBB &= ~(1ULL << H1); board->whiteBB |= 1ULL << F1;
-        } else if (move.castle == Q) {
+        } else if (piece == Q) {
             board->kingBB  &= ~(1ULL << E1); board->kingBB  |= 1ULL << C1;
             board->whiteBB &= ~(1ULL << E1); board->whiteBB |= 1ULL << C1;
             board->rookBB  &= ~(1ULL << A1); board->rookBB  |= 1ULL << D1;
             board->whiteBB &= ~(1ULL << A1); board->whiteBB |= 1ULL << D1;
-        } else if (move.castle == k) {
+        } else if (piece == k) {
             board->kingBB  &= ~(1ULL << E8); board->kingBB  |= 1ULL << G8;
             board->blackBB &= ~(1ULL << E8); board->blackBB |= 1ULL << G8;
             board->rookBB  &= ~(1ULL << H8); board->rookBB  |= 1ULL << F8;
             board->blackBB &= ~(1ULL << H8); board->blackBB |= 1ULL << F8;
-        } else if (move.castle == q) {
+        } else if (piece == q) {
             board->kingBB  &= ~(1ULL << E8); board->kingBB  |= 1ULL << C8;
             board->blackBB &= ~(1ULL << E8); board->blackBB |= 1ULL << C8;
             board->rookBB  &= ~(1ULL << A8); board->rookBB  |= 1ULL << D8;
@@ -350,14 +381,14 @@ void pushMove(Board *board, Move move) {
         return;
     }
 
-    U64 *pieceThatMovedBB = (&board->pawnBB + piece);
-    U64 *curColorBB = &board->blackBB - turn;
-    U64 *oppColorBB = &board->whiteBB + turn;
+    U64 *pieceThatMovedBB = (&board->pawnBB + piece % 6);
+    U64 *curColorBB = turn ? &board->whiteBB : &board->blackBB;
+    U64 *oppColorBB = turn ? &board->blackBB : &board->whiteBB;
 
-    U64 toMask = 1ULL << move.to;
+    U64 toMask = 1ULL << to;
 
     /* pick up piece, wait to put down*/
-    *pieceThatMovedBB ^= 1ULL << move.from; *curColorBB ^= 1ULL << move.from;
+    *pieceThatMovedBB ^= 1ULL << from; *curColorBB ^= 1ULL << from;
 
     /* check if piece has been captured */
     if (*oppColorBB & toMask) {
@@ -370,10 +401,10 @@ void pushMove(Board *board, Move move) {
 
                 /* now check if rook was captured from starting sq.
                  * if so, clear its castle rights */
-                if (p == ROOK && move.to == H1) clearCastleRights(board, K);
-                if (p == ROOK && move.to == A1) clearCastleRights(board, Q);
-                if (p == ROOK && move.to == H8) clearCastleRights(board, k);
-                if (p == ROOK && move.to == A8) clearCastleRights(board, q);
+                if (p == ROOK && to == H1) clearCastleRights(board, K);
+                if (p == ROOK && to == A1) clearCastleRights(board, Q);
+                if (p == ROOK && to == H8) clearCastleRights(board, k);
+                if (p == ROOK && to == A8) clearCastleRights(board, q);
 
                 break;
             }
@@ -381,57 +412,26 @@ void pushMove(Board *board, Move move) {
     }
 
     /* check if promotion / put down piece */
-    if (piece == PAWN && move.promo) {
-        U64 promoMask = 1ULL << move.to;
-        U64 *promoBB = (&board->pawnBB + move.promo % 6);
+    if (IS_PROMO(flag)) {
+        U64 promoMask = 1ULL << to;
+        U64 *promoBB = (&board->pawnBB + PROMO_PT(flag));
         *promoBB |= promoMask;
         *curColorBB |= promoMask;
     } else {
-        *pieceThatMovedBB |= 1ULL << move.to; *curColorBB |= 1ULL << move.to;
+        *pieceThatMovedBB |= 1ULL << to; *curColorBB |= 1ULL << to;
     }
 
     /* set en passant if double move from pawns starting rank */
     U64 startRank = turn ? RANK_2 : RANK_7;
-    if (piece == PAWN && (fromMask & startRank)) {
-        if (abs(move.from - move.to) == 16) {
-            board->enp = turn ? move.to - 8 : move.to + 8;
+    if (pieceAgnostic == PAWN && (fromMask & startRank)) {
+        if ((from ^ to) == 16) {
+            board->enp = turn ? to - 8 : to + 8;
         }
     }
 
     /* finally switch turn */
     board->turn = !turn;
     return;
-}
-
-int validateMove(Board board, Move* move) {
-    U64 kingBB = 0ULL;
-    int kingSq = -1;
-
-    if (move->castle) {
-        /* does king travel over attacked squares? */
-        int sq;
-        if (move->castle == K) sq = F1;
-        if (move->castle == Q) sq = D1;
-        if (move->castle == k) sq = F8;
-        if (move->castle == q) sq = D8;
-        if (isSquareAttacked(board, sq)) return false;
-
-        kingBB = board.kingBB & (board.turn ? board.whiteBB : board.blackBB);
-        kingSq = __builtin_ctzll(kingBB);
-
-        if (isSquareAttacked(board, kingSq)) return false;
-    }
-
-    Board cpy = board;
-    pushMove(&cpy, *move);
-
-    /* is king attacked after the move is made? */
-    kingBB = cpy.kingBB & (cpy.turn ? cpy.blackBB : cpy.whiteBB);
-    cpy.turn = !cpy.turn;
-    kingSq = __builtin_ctzll(kingBB);
-    if (isSquareAttacked(cpy, kingSq)) return false;
-
-    return true;
 }
 
 int canCastle(Board *board, int right, U64 occ) {
@@ -448,11 +448,30 @@ int canCastle(Board *board, int right, U64 occ) {
         default: return 0;
     }
 
+    Board copy = *board;
+
+    int kingSq = board->turn ? E1 : E8;
+
+    /* king cannot be in check */
+    if (isSquareAttacked(copy, kingSq)) return 0;
+
+    int path1, path2;
+
+    switch (right) {
+        case K: path1 = F1; path2 = G1; break;
+        case Q: path1 = D1; path2 = C1; break;
+        case k: path1 = F8; path2 = G8; break;
+        case q: path1 = D8; path2 = C8; break;
+        default: return 0;
+    }
+
+    if (isSquareAttacked(copy, path1)) return 0;
+    if (isSquareAttacked(copy, path2)) return 0;
+
     return 1;
 }
 
-/* generate all legal moves for the given board */
-int legalMoves(Board *board, Move moves[]) {
+int pseudoMoves(Board *board, Move moves[]) {
     int length = 0;
 
     int turn = board->turn;
@@ -464,12 +483,12 @@ int legalMoves(Board *board, Move moves[]) {
     U64 kingBB   = board->kingBB   & (turn ? board->whiteBB : board->blackBB);
 
     U64 friendly  = turn ? board->whiteBB : board->blackBB;
+    U64 enemy = turn ? board->blackBB : board->whiteBB;
     U64 occupancy = board->whiteBB | board->blackBB;
     int kingSq = __builtin_ctzll(kingBB);
 
     U64 attackMask = 0ULL;
 
-    /* generate all piece movement */
     while (pawnBB) {
         int sq = __builtin_ctzll(pawnBB);
         attackMask = getPawnMoves(sq, *board, turn);
@@ -480,18 +499,18 @@ int legalMoves(Board *board, Move moves[]) {
             U64 isPromoting = turn ? (toBB & RANK_8) : (toBB & RANK_1);
 
             if (isPromoting) {
-                Move q = ENCODE_MOVE(sq, to, QUEEN+turn*6, 0, PAWN+turn*6);
-                Move n = ENCODE_MOVE(sq, to, KNIGHT+turn*6, 0, PAWN+turn*6);
-                Move r = ENCODE_MOVE(sq, to, ROOK+turn*6, 0, PAWN+turn*6);
-                Move b = ENCODE_MOVE(sq, to, BISHOP+turn*6, 0, PAWN+turn*6);
+                Move q = ENCODE_MOVE(sq, to, PAWN+turn*6, QUEEN_PROMO_FLAG);
+                Move n = ENCODE_MOVE(sq, to, PAWN+turn*6, KNIGHT_PROMO_FLAG);
+                Move r = ENCODE_MOVE(sq, to, PAWN+turn*6, ROOK_PROMO_FLAG);
+                Move b = ENCODE_MOVE(sq, to, PAWN+turn*6, BISHOP_PROMO_FLAG);
 
-                if (validateMove(*board, &q)) moves[length++] = q;
-                if (validateMove(*board, &n)) moves[length++] = n;
-                if (validateMove(*board, &r)) moves[length++] = r;
-                if (validateMove(*board, &b)) moves[length++] = b;
+                moves[length++] = q;
+                moves[length++] = n;
+                moves[length++] = r;
+                moves[length++] = b;
             } else {
-                Move move = ENCODE_MOVE(sq, to, 0, 0, PAWN+turn*6);
-                if (validateMove(*board, &move)) moves[length++] = move;
+                Move move = ENCODE_MOVE(sq, to, PAWN+turn*6, EMPTY_FLAG);
+                moves[length++] = move;
             }
             attackMask &= attackMask - 1;
         }
@@ -504,8 +523,8 @@ int legalMoves(Board *board, Move moves[]) {
         while (attackMask) {
             int to = __builtin_ctzll(attackMask);
 
-            Move move = ENCODE_MOVE(sq, to, 0, 0, KNIGHT+turn*6);
-            if (validateMove(*board, &move)) moves[length++] = move; 
+            Move move = ENCODE_MOVE(sq, to, KNIGHT+turn*6, EMPTY_FLAG);
+            moves[length++] = move; 
             attackMask &= attackMask - 1;
         }
         knightBB &= knightBB - 1;
@@ -517,8 +536,8 @@ int legalMoves(Board *board, Move moves[]) {
         while (attackMask) {
             int to = __builtin_ctzll(attackMask);
 
-            Move move = ENCODE_MOVE(sq, to, 0, 0, ROOK+turn*6);
-            if (validateMove(*board, &move)) moves[length++] = move;
+            Move move = ENCODE_MOVE(sq, to, ROOK+turn*6, EMPTY_FLAG);
+            moves[length++] = move;
             attackMask &= attackMask - 1;
         }
         rookBB &= rookBB - 1;
@@ -530,8 +549,8 @@ int legalMoves(Board *board, Move moves[]) {
         while (attackMask) {
             int to = __builtin_ctzll(attackMask);
 
-            Move move = ENCODE_MOVE(sq, to, 0, 0, BISHOP+turn*6);
-            if (validateMove(*board, &move)) moves[length++] = move;
+            Move move = ENCODE_MOVE(sq, to, BISHOP+turn*6, EMPTY_FLAG);
+            moves[length++] = move;
             attackMask &= attackMask - 1;
         }
         bishopBB &= bishopBB - 1;
@@ -544,8 +563,8 @@ int legalMoves(Board *board, Move moves[]) {
         while (attackMask) {
             int to = __builtin_ctzll(attackMask);
 
-            Move move = ENCODE_MOVE(sq, to, 0, 0, QUEEN+turn*6);
-            if (validateMove(*board, &move)) moves[length++] = move;
+            Move move = ENCODE_MOVE(sq, to, QUEEN+turn*6, EMPTY_FLAG);
+            moves[length++] = move;
             attackMask &= attackMask - 1;
         }
         queenBB &= queenBB - 1;
@@ -555,8 +574,8 @@ int legalMoves(Board *board, Move moves[]) {
 
     while (attackMask) {
         int to = __builtin_ctzll(attackMask);
-        Move move = ENCODE_MOVE(kingSq, to, 0, 0, KING+turn*6);
-        if (validateMove(*board, &move)) moves[length++] = move;
+        Move move = ENCODE_MOVE(kingSq, to, KING+turn*6, EMPTY_FLAG);
+        moves[length++] = move;
         attackMask &= attackMask - 1;
     }
 
@@ -564,30 +583,37 @@ int legalMoves(Board *board, Move moves[]) {
     int moveTo[4] = {G1, C1, G8, C8};
     for (int i = 0; i < 4; i++) {
         if (canCastle(board, right[i], occupancy)) {
-            Move move = ENCODE_MOVE(kingSq, moveTo[i], 0, right[i], KING+turn*6);
-            if (validateMove(*board, &move)) moves[length++] = move;
+            Move move = ENCODE_MOVE(kingSq, moveTo[i], right[i], CASTLE_FLAG);
+            moves[length++] = move;
         }
     }
 
     return length;
 }
 
-void makeMove(Board *board, Move move) {
-    if (validateMove(*board, &move)) {
-        pushMove(board, move);
+int legalMoves(Board *board, Move legal[]) {
+    Move pseudo[MAX_MOVES];
+    int count = pseudoMoves(board, pseudo);
+
+    int legalCount = 0;
+
+    for (int i = 0; i < count; i++) {
+        Board copy = *board;
+
+        doMove(&copy, pseudo[i]);
+
+        U64 kingBB = copy.kingBB & (copy.turn ? copy.blackBB : copy.whiteBB);
+        if (!kingBB) continue;
+
+        int kingSq = __builtin_ctzll(kingBB);
+
+        copy.turn = !copy.turn;
+        if (!isSquareAttacked(copy, kingSq)) legal[legalCount++] = pseudo[i];
     }
+
+    return legalCount;
 }
 
-int inCheck(Board *board, int color) {
-    U64 kingBB = board->kingBB & (color ? board->whiteBB : board->blackBB);
-    int kingSq = __builtin_ctzll(kingBB);
-
-    if (isSquareAttacked(*board, kingSq)) return false;
-    return true;
+void makeMove(Board *board, Move move) {
+    doMove(board, move);
 }
-
-void makemove(Board *board, Move move, Undo *undo);
-void undoMove(Board *board, Undo *undo);
-int getTurn();
-int inCheckmate();
-int inDraw();
